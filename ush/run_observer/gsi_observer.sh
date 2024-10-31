@@ -3,7 +3,7 @@
 #SBATCH -o GSIobserver.o%j
 #SBATCH -A da-cpu
 #SBATCH -q batch
-#SBATCH -p orion
+#SBATCH -p hercules
 #SBATCH --nodes=25
 #SBATCH --ntasks-per-node=8
 #SBATCH --exclusive

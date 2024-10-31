@@ -3,7 +3,7 @@
 #SBATCH -o iodaconv.o%j
 #SBATCH -A da-cpu
 #SBATCH -q batch
-#SBATCH -p orion  
+#SBATCH -p hercules
 #SBATCH --nodes=1
 #SBATCH --exclusive
 #SBATCH -t 1:30:00
