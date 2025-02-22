@@ -2684,6 +2684,7 @@ contains
                  call nc_diag_metadata_to_single("Land_Fraction",data_s(ifrac_lnd,n)           ) ! fractional coverage by land
                  call nc_diag_metadata_to_single("Ice_Fraction",data_s(ifrac_ice,n)            ) ! fractional coverage by ice
                  call nc_diag_metadata_to_single("Snow_Fraction",data_s(ifrac_sno,n)           ) ! fractional coverage by snow
+                 call nc_diag_metadata_to_single("fractionOfClearPixelsInFOV",cloud_frac       ) ! fractional coverage by snow
 
                  if(.not. retrieval)then
                     call nc_diag_metadata_to_single("Water_Temperature",surface(1)%water_temperature  ) ! surface temperature over water (K)
