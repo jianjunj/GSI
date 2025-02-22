@@ -208,6 +208,7 @@ public isazi_ang2           ! = 37 index of solar azimuth angle (degrees)
   logical        ,save :: mixed_use
   logical        ,save :: use_gfdl_qsat 
   integer(i_kind), parameter :: min_n_absorbers = 2
+  integer(i_kind) :: n_absorbers
 
   integer(i_kind),save :: iedge_log
   integer(i_kind),save :: ilzen_ang2,ilazi_ang2,iscan_ang2,iszen_ang2,isazi_ang2
@@ -362,7 +363,6 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmo
 ! ...all "additional absorber" variables
   integer(i_kind) :: j,icount
   integer(i_kind) :: ig
-  integer(i_kind) :: n_absorbers
   logical quiet
   logical print_verbose
 
