@@ -1156,11 +1156,8 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
               if (l4dvar.or.l4densvar) then
                  if ((t4dv<zero.OR.t4dv>winlen) .and. .not.driftl) cycle loop_readsb ! outside time window
               else
-                 ! Fix to ensure end of time window is NOT included
-                 if ((real(abs(time)) > real(ctwind(nc)) .or. real(time)==real(three) .or. &
-                      real(abs(time)) > real(twindin)) .and. .not. driftl)cycle loop_readsb ! outside time window
-!                 if((real(abs(time)) > real(ctwind(nc)) .or. real(abs(time)) > real(twindin)) &
-!                    .and. .not. driftl)cycle loop_readsb ! outside time window
+                 if((real(abs(time)) > real(ctwind(nc)) .or. real(abs(time)) > real(twindin)) &
+                    .and. .not. driftl)cycle loop_readsb ! outside time window
               endif
 
               timex=time
@@ -1921,10 +1918,7 @@ subroutine read_prepbufr(nread,ndata,nodata,infile,obstype,lunout,twindin,sis,&
                  if (l4dvar.or.l4densvar) then
                     if (t4dv<zero.OR.t4dv>winlen) cycle LOOP_K_LEVS
                  else
-                 ! Fix to ensure end of time window is NOT included
-                    if (real(abs(time)) > real(ctwind(nc)) .or. real(time)==real(three) .or. &
-                      real(abs(time)) > real(twindin)) cycle LOOP_K_LEVS ! outside time window
-!                    if (real(abs(time))>real(ctwind(nc)) .or.  real(abs(time))>real(twindin)) cycle LOOP_K_LEVS
+                    if (real(abs(time))>real(ctwind(nc)) .or.  real(abs(time))>real(twindin)) cycle LOOP_K_LEVS
                  endif
               end if
 

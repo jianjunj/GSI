@@ -55,10 +55,8 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
   use guess_grids, only: nfldsig,hrdifsig,geop_hgtl,sfcmod_gfs
   use guess_grids, only: tropprs,sfcmod_mm5
   use guess_grids, only: ges_lnprsl,comp_fact10,pbl_height
-  use guess_grids, only: ges_tsen
-  use guess_grids, only: ges_prsi
   use constants, only: zero,half,one,tiny_r_kind,two, &
-           three,rd,grav,four,five,huge_single,r100,r1000,wgtlim,r10,r400
+           three,rd,grav,four,five,huge_single,r1000,wgtlim,r10,r400
   use constants, only: grav_ratio,flattening,deg2rad, &
        grav_equator,somigliana,semi_major_axis,eccentricity
   use jfunc, only: jiter,last,jiterstart,miter
@@ -266,7 +264,6 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
   real(r_kind) presw,factw,dpres,ugesin,vgesin,rwgt,dpressave
   real(r_kind) sfcchk,prsln2,error,dtime,dlon,dlat,r0_001,rsig,thirty,rsigp
   real(r_kind) ratio_errors,goverrd,spdges,spdob,ten,psges,zsges
-  real(r_kind) ratio_errors1, in_error_1, in_error_2 !ADC
   real(r_kind) slat,sin2,termg,termr,termrg,pobl,uob,vob
   real(r_kind) uob_reg,vob_reg,uob_e,vob_e,dlon_e,uges_e,vges_e,dudiff_e,dvdiff_e
   real(r_kind) dz,zob,z1,z2,p1,p2,dz21,dlnp21,spdb,dstn
@@ -279,23 +276,9 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
   real(r_kind),dimension(nele,nobs):: data
   real(r_kind),dimension(nobs):: dup
   real(r_kind),dimension(nsig)::prsltmp,tges,zges
-  real(r_kind),dimension(nsig)::zges_read      !emily: from geop_heigtl
-  real(r_kind),dimension(nsig)::zges_geometric !emily: calculated from zges_read
   real(r_kind) wdirob,wdirgesin,wdirdiffmax
   real(r_kind),dimension(34)::ptabluv
   real(r_single),allocatable,dimension(:,:)::rdiagbuf
-  real(r_kind),dimension(nsig):: prsltmp2
-  real(r_kind),dimension(nsig+1):: prsitmp
-  real(r_kind),dimension(nsig):: ttmp,qtmp,utmp,vtmp,hsges
-  ! GSI profiles are stored with bottom up index; output the profiles
-  ! with top down index  
-  real(r_kind),dimension(nsig):: ttmp_reverse,tvtmp_reverse,qtmp_reverse,utmp_reverse,vtmp_reverse
-  real(r_kind),dimension(nsig):: hsges_reverse, zges_reverse,prsltmp2_reverse
-  real(r_kind),dimension(nsig):: zges_read_reverse, zges_geometric_reverse
-  real(r_kind),dimension(nsig+1):: prsitmp_reverse
-  real(r_kind) psges2
-  !<< JEDI 
-
 
   integer(i_kind) i,nchar,nreal,k,j,l,ii,itype,ijb
 ! Variables needed for new polar winds QC based on Log Normalized Vector Departure (LNVD)
@@ -310,7 +293,7 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
   integer(i_kind) ihgt,ier2,iuse,ilate,ilone
   integer(i_kind) izz,iprvd,isprvd
   integer(i_kind) idomsfc,isfcr,iskint,iff10
-  integer(i_kind) ibb,ikk,ihil,idddd,iamvq,kk
+  integer(i_kind) ibb,ikk,ihil,idddd
 
   integer(i_kind) num_bad_ikx,iprev_station
 
@@ -351,7 +334,6 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
 
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_ps
   real(r_kind),allocatable,dimension(:,:,:  ) :: ges_z
-  real(r_kind),allocatable,dimension(:,:,:,:) :: ges_q
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_u
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_v
   real(r_kind),allocatable,dimension(:,:,:,:) :: ges_tv
@@ -402,9 +384,8 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
   icat=24     ! index of data level category
   ijb=25      ! index of non linear qc parameter
   ihil=26     ! index of  hilbert curve weight
-  iamvq=27    ! index of AMVQ
-  iptrbu=35   ! index of u perturbation
-  iptrbv=36   ! index of v perturbation
+  iptrbu=27   ! index of u perturbation
+  iptrbv=28   ! index of v perturbation
 
   mm1=mype+1
   scale=one
@@ -597,23 +578,6 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
      call tintrp2a1(ges_lnprsl,prsltmp,dlat,dlon,dtime,hrdifsig,&
           nsig,mype,nfldsig)
 
-! GEOVALS for UFO eval
-     psges2  = psges          ! keep in cb
-     prsltmp2 = exp(prsltmp)
-     call tintrp2a1(ges_prsi,prsitmp,dlat,dlon,dtime,hrdifsig,&
-          nsig+1,mype,nfldsig)
-     call tintrp2a1(ges_tsen,ttmp,dlat,dlon,dtime,hrdifsig,&
-          nsig,mype,nfldsig)
-     call tintrp2a1(ges_q,qtmp,dlat,dlon,dtime,hrdifsig,&
-          nsig,mype,nfldsig)
-     call tintrp2a1(ges_u,utmp,dlat,dlon,dtime,hrdifsig,&
-          nsig,mype,nfldsig)
-     call tintrp2a1(ges_v,vtmp,dlat,dlon,dtime,hrdifsig,&
-          nsig,mype,nfldsig)
-     call tintrp2a1(geop_hgtl,hsges,dlat,dlon,dtime,hrdifsig,&
-          nsig,mype,nfldsig)
-  
-! END GEOVALS
 !    Type 221=pibal winds contain a mixture of wind observations reported
 !    by pressure and others by height.  Those levels only reported by 
 !    pressure have a missing value (ie, large) value for the reported 
@@ -909,9 +873,7 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
         if(rhgh/=zero) awork(3) = awork(3) + one
      end if
      ratio_errors=error/(data(ier,i)+drpx+1.0e6_r_kind*rhgh+four*rlow)
-     ratio_errors1=ratio_errors ! ADC
-     in_error_1=error             ! ADC
-     in_error_2=data(ier,i)      ! ADC
+
 !    Compute innovations
      lowlevelsat=itype==242.or.itype==243.or.itype==245.or.itype==246.or. &
                  itype==247.or.itype==250.or.itype==251.or.itype==252.or. &
@@ -1596,24 +1558,6 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
          write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
          call stop2(999)
      endif
-!    get q ...
-     varname='q'
-     call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
-     if (istatus==0) then
-         if(allocated(ges_q))then
-            write(6,*) trim(myname), ': ', trim(varname), ' already incorrectly alloc '
-            call stop2(999)
-         endif
-         allocate(ges_q(size(rank3,1),size(rank3,2),size(rank3,3),nfldsig))
-         ges_q(:,:,:,1)=rank3
-         do ifld=2,nfldsig
-            call gsi_bundlegetpointer(gsi_metguess_bundle(ifld),trim(varname),rank3,istatus)
-            ges_q(:,:,:,ifld)=rank3
-         enddo
-     else
-         write(6,*) trim(myname),': ', trim(varname), ' not found in met bundle, ier= ',istatus
-         call stop2(999)
-     endif
 !    get u ...
      varname='u'
      call gsi_bundlegetpointer(gsi_metguess_bundle(1),trim(varname),rank3,istatus)
@@ -1845,26 +1789,16 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
            call nc_diag_metadata_to_single("Nonlinear_QC_Var_Jb",var_jb            )
            call nc_diag_metadata_to_single("Prep_Use_Flag",data(iuse,i)      )
            if(muse(i)) then
-              call nc_diag_metadata_to_single("Analysis_Use_Flag",    one              )
+              call nc_diag_metadata("Analysis_Use_Flag",    sngl(one)              )
            else
-              call nc_diag_metadata_to_single("Analysis_Use_Flag",    -one             )
+              call nc_diag_metadata("Analysis_Use_Flag",    sngl(-one)             )
            endif
 
-           !call nc_diag_metadata_to_single("drpx",drpx             )  ! ADC
-           !call nc_diag_metadata_to_single("rhgh",rhgh             )  ! ADC
-           !call nc_diag_metadata_to_single("rlow",rlow             )  ! ADC
-           !call nc_diag_metadata_to_single("in_error_1",in_error_1 )  ! ADC
-           !call nc_diag_metadata_to_single("in_error_2",in_error_2 )   ! ADC
-           !call nc_diag_metadata_to_single("ratio_errors",ratio_errors1) ! ADC
-
-
-           call nc_diag_metadata_to_single("Nonlinear_QC_Rel_Wgt",rwgt)             
-           call nc_diag_metadata_to_single("Errinv_Input",errinv_input)     
-           call nc_diag_metadata_to_single("Errinv_Adjust",errinv_adjst)     
-           call nc_diag_metadata_to_single("Errinv_Final",errinv_final)     
-           ! AMVQ Mitigated winds                                                  
-           call nc_diag_metadata_to_single("Mitigation_flag_AMVQ",data(iamvq,i)    ) 
-           call nc_diag_metadata_to_single("Wind_Reduction_Factor_at_10m",factw    )
+           call nc_diag_metadata_to_single("Nonlinear_QC_Rel_Wgt",rwgt          )
+           call nc_diag_metadata_to_single("Errinv_Input",errinv_input          )
+           call nc_diag_metadata_to_single("Errinv_Adjust",errinv_adjst         )
+           call nc_diag_metadata_to_single("Errinv_Final",errinv_final          )
+           call nc_diag_metadata_to_single("Wind_Reduction_Factor_at_10m",factw )
 
            if (.not. regional .or. fv3_regional) then
               call nc_diag_metadata_to_single("u_Observation",data(iuob,i)     )
@@ -1930,81 +1864,12 @@ subroutine setupw(obsLL,odiagLL,lunin,mype,bwork,awork,nele,nobs,is,conv_diagsav
               call nc_diag_data2d("v_Observation_Operator_Jacobian_val", real(dhx_dx_v%val,r_single))
            endif
 
-    ! GEOVALS
-    !>>emily
-    do k = 1, nsig
-       kk  = nsig-k+1
-       utmp_reverse(kk)     = utmp(k)
-       vtmp_reverse(kk)     = vtmp(k)
-       ttmp_reverse(kk)     = ttmp(k)
-       tvtmp_reverse(kk)    = tges(k)   !emily
-       qtmp_reverse(kk)     = qtmp(k)
-       hsges_reverse(kk)    = hsges(k)
-       zges_read_reverse(kk)= zges_read(k)
-       zges_geometric_reverse(kk)= zges_geometric(k)
-       zges_reverse(kk)     = zges(k)
-       prsltmp2_reverse(kk) = prsltmp2(k)
-    enddo
-    do k = 1, nsig+1
-       kk  = (nsig+1)-k+1
-       prsitmp_reverse(kk)  = prsitmp(k)
-    enddo
-
-   call nc_diag_data2d("atmosphere_pressure_coordinate", sngl(prsltmp2_reverse*r1000))
-    call nc_diag_data2d("atmosphere_pressure_coordinate_interface", sngl(prsitmp_reverse*r1000))
-    call nc_diag_data2d("air_temperature", sngl(ttmp_reverse))
-    call nc_diag_data2d("virtual_temperature", sngl(tvtmp_reverse)) !emily
-    call nc_diag_data2d("specific_humidity", sngl(qtmp_reverse))
-    call nc_diag_data2d("eastward_wind", sngl(utmp_reverse))
-    call nc_diag_data2d("northward_wind", sngl(vtmp_reverse))
-!   call nc_diag_data2d("geopotential_height", sngl(hsges_reverse) )       !orig
-    call nc_diag_data2d("geopotential_height", sngl(zges_read_reverse) ) !emily
-    call nc_diag_data2d("geometric_height", sngl(zges_geometric_reverse) ) !emily
-    !<<emily
-
-    ! GEOVALS
-!    call nc_diag_data2d("atmosphere_pressure_coordinate", sngl(prsltmp2*r1000))
-!    call nc_diag_data2d("atmosphere_pressure_coordinate_interface",
-!    sngl(prsitmp*r1000))
-!    call nc_diag_data2d("air_temperature", sngl(ttmp))
-!    call nc_diag_data2d("specific_humidity", sngl(qtmp))
-!    call nc_diag_data2d("eastward_wind", sngl(utmp))
-!    call nc_diag_data2d("northward_wind", sngl(vtmp))
-!    call nc_diag_data2d("geopotential_height", sngl(hsges) )
-    !call nc_diag_metadata("surface_geometric_height", sngl(zsges) ) Both
-    !surface_geometric_height and geopotential height get copied to
-    !surface_height in gsi_ncdiag.py
-    call nc_diag_metadata("surface_geopotential_height", sngl(zsges) ) !emily
-    call nc_diag_metadata("tropopause_pressure", sngl(trop5*r100) )
-    call nc_diag_metadata("surface_air_pressure", sngl(psges2*r1000) )
-    call nc_diag_metadata("Land_Type_Index", isli)
-    ! END GEOVALS
-    ! extra fields for AMV QC
-    call nc_diag_metadata("wind_computation_method", sngl(data(28,i)))
-    call nc_diag_metadata("satellite_zenith_angle", sngl(data(29,i)))
-    call nc_diag_metadata("satellite_identifier", sngl(data(30,i)))
-    call nc_diag_metadata("QI_without_forecast_info", sngl(data(31,i)))
-    call nc_diag_metadata("QI_with_forecast_info", sngl(data(32,i)))
-    call nc_diag_metadata("expected_error", sngl(data(33,i)))
-    call nc_diag_metadata("coefficient_of_variation", sngl(data(34,i)))
-
-    ! Debug errormod
-    !call nc_diag_metadata("errout", sngl(data(23,i)))
-    !call nc_diag_metadata("vmag", sngl(data(24,i)))
-    !call nc_diag_metadata("pdiffd", sngl(data(25,i)))
-    !call nc_diag_metadata("pdiffu", sngl(data(26,i)))
-
-
-
-    ! end extra AMV QC fields
-
   end subroutine contents_netcdf_diag_
 
   subroutine final_vars_
     if(allocated(ges_tv)) deallocate(ges_tv)
     if(allocated(ges_v )) deallocate(ges_v )
     if(allocated(ges_u )) deallocate(ges_u )
-    if(allocated(ges_q )) deallocate(ges_q )
     if(allocated(ges_z )) deallocate(ges_z )
     if(allocated(ges_ps)) deallocate(ges_ps)
   end subroutine final_vars_

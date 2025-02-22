@@ -297,7 +297,7 @@ contains
   use radinfo, only: iland_det, isnow_det, iwater_det, imix_det, iice_det, &
                       iomg_det, itopo_det, isst_det,iwndspeed_det, optconv
   use qcmod, only: setup_tzr_qc,ifail_scanedge_qc,ifail_outside_range
-  use qcmod, only: iasi_cads, cris_cads
+  use qcmod, only: iasi_cads, iasing_cads, cris_cads
   use state_vectors, only: svars3d, levels, svars2d, ns3d
   use oneobmod, only: lsingleradob,obchan,oblat,oblon,oneob_type
   use correlated_obsmod, only: corr_adjust_jacobian, idnames
@@ -371,7 +371,7 @@ contains
   logical cao_flag                       
   logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb,goes_img,ahi,mhs,abi
   type(sparr2) :: dhx_dx
-  logical avhrr,avhrr_navy,viirs,lextra,ssu,iasi,cris,seviri,atms
+  logical avhrr,avhrr_navy,viirs,lextra,ssu,iasi,iasing,cris,seviri,atms
   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,amsr2,gmi,saphir
   logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
   logical sea,mixed,land,ice,snow,toss,l_may_be_passive,eff_area
@@ -546,6 +546,7 @@ contains
   ssmis_img  = obstype == 'ssmis_img'
   ssmis_env  = obstype == 'ssmis_env'
   iasi       = obstype == 'iasi'
+  iasing     = obstype == 'iasi-ng'
   cris       = obstype == 'cris' .or. obstype == 'cris-fsr'
   seviri     = obstype == 'seviri'
   atms       = obstype == 'atms'
@@ -634,7 +635,7 @@ contains
   imager_cluster_bt=zero
   imager_chan_stdev=zero
   imager_model_bt=zero
-  if ((iasi_cads .and. iasi) .or. (cris_cads .and. cris)) then
+  if ((iasi_cads .and. iasi) .or. (iasing_cads .and. iasing) .or. (cris_cads .and. cris)) then
 
     call cads_imager_calc(obstype,isis,nobs,nreal,nchanl,nsig,data_s,init_pass,mype, &
                              imager_cluster_fraction,imager_cluster_bt,imager_chan_stdev, imager_model_bt)
@@ -861,7 +862,7 @@ contains
         if(seviri .and. abs(data_s(iszen_ang,n)) > 180.0_r_kind) data_s(iszen_ang,n)=r100
  
  
-!  Set land/sea, snow, i e percentages and flags (no time interpolation)
+!  Set land/sea, snow, ice percentages and flags (no time interpolation)
 
         sea  = data_s(ifrac_sea,n)  >= 0.99_r_kind
         land = data_s(ifrac_lnd,n)  >= 0.99_r_kind
@@ -1389,7 +1390,7 @@ contains
 !  ---------- IR -------------------
 !       QC HIRS/2, GOES, HIRS/3 and AIRS sounder data
 !
-        ObsQCs: if (hirs .or. goessndr .or. airs .or. iasi .or. cris) then
+        ObsQCs: if (hirs .or. goessndr .or. airs .or. iasi .or. iasing .or. cris) then
 
            frac_sea=data_s(ifrac_sea,n)
 
@@ -1410,7 +1411,7 @@ contains
            end do
 
            call qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse(n),goessndr,airs,cris,iasi,      &
-              hirs,zsges,cenlat,frac_sea,pangs,trop5,zasat,tzbgr,tsavg5,tbc,tb_obs,tbcnob,tnoise, &
+              iasing,hirs,zsges,cenlat,frac_sea,pangs,trop5,zasat,tzbgr,tsavg5,tbc,tb_obs,tbcnob,tnoise, &
               wavenumber,ptau5,prsltmp,tvp,temp,wmix,chan_level,emissivity_k,ts,tsim,         &
               id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,zero_irjaco3_pole(n),     &
               imager_cluster_fraction(:,n), imager_cluster_bt(:,:,n), imager_chan_stdev(:,n),imager_model_bt(:,n))
@@ -1434,8 +1435,7 @@ contains
 
            call qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse(n),   &
               zsges,cenlat,tb_obsbc1,cosza,clw_obs,tbc,ptau5,emissivity_k,ts, &                   
-              pred,predchan,id_qc,aivals,errf,errf0,clw_obs,varinv,varinv_sdoei,varinv_grosschk,varinv_after_jsfcchk,varinv_after_sdoei,cldeff_obs,cldeff_fg,factch6,factch4,qc4emiss_out,  &   !emily
-           !  pred,predchan,id_qc,aivals,errf,errf0,clw_obs,varinv,cldeff_obs,cldeff_fg,factch6, &  !orig
+              pred,predchan,id_qc,aivals,errf,errf0,clw_obs,varinv,cldeff_obs,cldeff_fg,factch6, & 
               cld_rbc_idx,sfc_speed,error0,clw_guess_retrieval,scatp,radmod)                    
 
 !  If cloud impacted channels not used turn off predictor
@@ -1864,7 +1864,7 @@ contains
              varinv0(ii)=varinv(ii)
              raterr2(ii)=error0(ii)**2*varinv0(ii)
              if (l_may_be_passive .and. .not. retrieval) then
-               if(optconv > zero .and. (iasi .or. cris) .and. iinstr /= -1)then
+               if(optconv > zero .and. (iasi .or. iasing .or. cris) .and. iinstr /= -1)then
                  asum=zero
                  do k=1,nsig
                    asum=asum+abs(jacobian(iqs+k,ii))*qs(k)
@@ -2876,7 +2876,7 @@ contains
                  useflag=one
                  if (iuse_rad(ich(ich_diag(i))) < 1) useflag=-one
 
-                 call nc_diag_metadata_to_single("QC_Flag",id_qc(ich_diag(i))*useflag)! quality control mark or event indicator
+                 call nc_diag_metadata("QC_Flag",sngl(id_qc(ich_diag(i))*useflag))! quality control mark or event indicator
 
                  call nc_diag_metadata_to_single("Emissivity",emissivity(ich_diag(i))      )           ! surface emissivity
                  call nc_diag_metadata_to_single("Weighted_Lapse_Rate",tlapchn(ich_diag(i))         )           ! stability index

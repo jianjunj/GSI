@@ -118,6 +118,7 @@ module qcmod
 !   def airs_cads       - if true, use the cloud and aerosol detection routine for Aqua/AIRS instrument
 !   def cris_cads       - if true, use the cloud and aerosol detection routine for CrIS instruments
 !   def iasi_cads       - if true, use the cloud and aerosol detection routine for IASI instruments
+!   def iasing_cads     - if true, use the cloud and aerosol detection routine for IASI-NG instruments
 !
 ! following used for nonlinear qc:
 !
@@ -204,7 +205,7 @@ module qcmod
   public :: troflg
   public :: lat_c
   public :: nrand 
-  public :: airs_cads, cris_cads, iasi_cads
+  public :: airs_cads, cris_cads, iasi_cads, iasing_cads
 
   logical nlnqc_iter,njqc,vqc,nvqc,hub_norm
   logical noiqc
@@ -220,7 +221,7 @@ module qcmod
   logical vadwnd_l2rw_qc
   logical troflg
   logical cao_check
-  logical airs_cads, cris_cads, iasi_cads
+  logical airs_cads, cris_cads, iasi_cads, iasing_cads
 
   character(10):: vadfile
   integer(i_kind) npres_print
@@ -437,7 +438,7 @@ contains
     vadfile='none'
 
     use_poq7 = .false.
-    cao_check = .false.
+    cao_check = .true.
 
     gps_jacqc = .false.     ! Jacobian QC for GNSS RO is off by default
 
@@ -463,9 +464,10 @@ contains
     lat_c=21.0_r_kind
     nrand=13
 
-    airs_cads = .false.
-    cris_cads = .false.
-    iasi_cads = .false.
+    airs_cads   = .false.
+    cris_cads   = .false.
+    iasi_cads   = .false.
+    iasing_cads = .false.
 
     return
   end subroutine init_qcvars
@@ -600,8 +602,8 @@ contains
       tzchk = 0.85_r_kind
     elseif (  obstype == 'hirs2' .or. obstype == 'hirs3' .or. obstype == 'hirs4' .or. & 
               obstype == 'sndr' .or. obstype == 'sndrd1' .or. obstype == 'sndrd2'.or. &
-              obstype == 'sndrd3' .or. obstype == 'sndrd4' .or.  &
-              obstype == 'goes_img' .or. obstype == 'ahi' .or. obstype == 'airs' .or. obstype == 'iasi' .or. &
+              obstype == 'sndrd3' .or. obstype == 'sndrd4' .or.  obstype == 'goes_img' .or. &
+              obstype == 'ahi' .or. obstype == 'airs' .or. obstype == 'iasi' .or. obstype == 'iasi-ng' .or.&
               obstype == 'cris' .or. obstype == 'cris-fsr' .or. obstype == 'seviri'  .or. obstype == 'abi') then
       tzchk = 0.85_r_kind
     endif
@@ -2127,7 +2129,7 @@ subroutine qc_saphir(nchanl,sfchgt,luse,sea, &
 end subroutine qc_saphir
 
 subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,airs,                         &
-     cris,iasi,hirs,zsges,cenlat,frac_sea,pangs,trop5,zasat,tzbgr,tsavg5,tbc,tb_obs,tbcnob,tnoise, &
+     cris,iasi,iasing,hirs,zsges,cenlat,frac_sea,pangs,trop5,zasat,tzbgr,tsavg5,tbc,tb_obs,tbcnob,tnoise, &
      wavenumber,ptau5,prsltmp,tvp,temp,wmix,chan_level,emissivity_k,ts,tsim,                   &
      id_qc,aivals,errf,varinv,varinv_use,cld,cldp,kmax,zero_irjaco3_pole,cluster_fraction,    &
      cluster_bt, chan_stdev, model_bt)
@@ -2135,12 +2137,12 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,airs
 
 !$$$ subprogram documentation block
 !               .      .    .
-! subprogram:  qc_irsnd    QC for ir sounder data(hirs,goessndr,airs,iasi,cris)
+! subprogram:  qc_irsnd    QC for ir sounder data(hirs,goessndr,airs,iasi,iasing,cris)
 !
 !   prgmmr: derber           org: np23            date: 2010-08-20
 !
 ! abstract: set quality control criteria for ir sounder data (hirs, 
-!          goessndr, airs, iasi, cris)
+!          goessndr, airs, iasi, iasing, cris)
 !
 ! program history log:
 !     2010-08-10  derber transfered from setuprad
@@ -2161,6 +2163,8 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,airs
 !     goessndr     - logical flag - if goessndr data - true
 !     cris         - logical flag - if cris data - true
 !     avhrr        - logical flag - if avhrr data - true
+!     iasi         - logical flag - if iasi data - true
+!     iasing       - logical flag - if iasing data - true
 !     zsges        - elevation of guess
 !     cenlat       - latitude of observation
 !     frac_sea     - fraction of grid box covered with water
@@ -2215,7 +2219,7 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,airs
 
 ! Declare passed variables
 
-  logical,                            intent(in   ) :: sea,land,ice,snow,luse,goessndr,airs,cris,hirs,iasi
+  logical,                            intent(in   ) :: sea,land,ice,snow,luse,goessndr,airs,cris,hirs,iasi,iasing
   logical,                            intent(inout) :: zero_irjaco3_pole
   integer(i_kind),                    intent(in   ) :: nsig,nchanl,ndat,is
   integer(i_kind),dimension(nchanl),  intent(in   ) :: ich
@@ -2276,7 +2280,7 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,airs
                  *max(zero,cos(pangs*deg2rad))*oneover400
               varinv(i)=tmp*varinv(i)
               varinv_use(i)=tmp*varinv_use(i)
-!emily              if(id_qc(i) == igood_qc)id_qc(i)=ifail_2000_qc
+              if(id_qc(i) == igood_qc)id_qc(i)=ifail_2000_qc
            end if
         end if
      end do
@@ -2377,6 +2381,21 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,airs
              tropopause_height, boundary_layer_pres, tb_bc, tsim, chan_level, imager_chans, cluster_fraction, &
              cluster_bt, chan_stdev, model_bt, i_flag_cloud, cldp )
 
+  elseif ( iasing .and. iasing_cads ) then
+      I_Sensor_ID = 59
+      chan_array = nuchan(ich)                  ! channel numbers
+      tb_bc = tbc + tsim                        ! observation BT with bias correction
+      boundary_layer_pres = nint(0.8_r_kind*prsltmp(1))  !  boundary layer set to be 80% of surface pressure
+      tropopause_height = nint(trop5)
+      imager_chans = (/18,19/)                  ! imager channel numbers (from satinfo)
+      isurface_chan = 2539                      ! surface channel
+      ichan_10_micron = 2343                    ! ~10.7 micron channel for low level cloud test
+      ichan_12_micron = 1509                    ! ~12.0 micron channel for low level cloud test
+      
+      call cloud_aerosol_detection( I_Sensor_ID, nchanl, chan_array, &
+             tropopause_height, boundary_layer_pres, tb_bc, tsim, chan_level, imager_chans, cluster_fraction, &
+             cluster_bt, chan_stdev, model_bt, i_flag_cloud, cldp )
+
   elseif ( airs .and. airs_cads ) then
       I_Sensor_ID = 11
       chan_array = nuchan(ich)                  ! channel numbers
@@ -2399,7 +2418,8 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,airs
 
 ! compute cloud stats 
 ! If using CADS
-  if ((cris .and. cris_cads) .or. (iasi .and. iasi_cads) .or. (airs .and. airs_cads)) then
+  if ((cris .and. cris_cads) .or. (iasi .and. iasi_cads) .or. (airs .and. airs_cads) .or. &
+       iasing .and. iasing_cads ) then
 
 !   Reject channels affected by clouds
     do i=1, nchanl
@@ -2467,7 +2487,6 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,airs
 ! default compute cloud stats, emc_legacy_cloud_detect 
   else  
     if ( lcloud > 0 ) then
-
       do i=1,nchanl
 !       reject channels with iuse_rad(j)=-1 when they are peaking below the cloud
         j=ich(i)
@@ -2952,7 +2971,6 @@ subroutine qc_avhrr(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,   &
   lcloud=0
   cld=zero
   cldp=r10*prsltmp(1)
-
 !
 ! Zeroing dtb since it used outside the loop in which is defined
 !
@@ -3283,6 +3301,7 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
   else
      clwx=0.6_r_kind
   end if
+
 ! QC6 in statsrad
   if(clwx >= one .and. luse)aivals(13,is) = aivals(13,is) + one
   factch4=clwx**2+(tbc(ich528)*w2f4)**2
@@ -3764,7 +3783,7 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
            ework = ework+min(0.002_r_kind*sfc_speed**2*error0(i), 0.5_r_kind*error0(i))
            clwtmp=min(abs(clwp_amsua-clw_guess_retrieval), one)
            ework = ework+min(13.0_r_kind*clwtmp*error0(i), 3.5_r_kind*error0(i))
-           if (scatp>9.0_r_kind .and. nchanl==15) then
+           if (scatp>9.0_r_kind) then
               ework = ework+min(1.5_r_kind*(scatp-9.0_r_kind)*error0(i), 2.5_r_kind*error0(i))
            end if
            ework=ework**2
@@ -4365,7 +4384,7 @@ subroutine qc_goesimg(nchanl,is,ndat,nsig,ich,dplat,sea,land,ice,snow,luse,   &
   real(r_kind),dimension(nsig,nchanl),intent(in ) :: temp,wmix
   real(r_kind),dimension(nchanl),   intent(in   ) :: tb_obs,tb_obs_sdv,tbc,tnoise,emissivity_k,ts
   real(r_kind),dimension(nchanl),   intent(inout) :: errf,varinv
-  character(10),                    intent(in   ) :: dplat
+  character(len=*),                 intent(in   ) :: dplat
 
 ! Declare local parameters
 
@@ -4655,7 +4674,7 @@ subroutine qc_geocsr(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,   &
   integer(i_kind),                  intent(in   ) :: nchanl,ndat,nsig,is
   integer(i_kind),dimension(nchanl),intent(in   ) :: ich
   integer(i_kind),dimension(nchanl),intent(inout) :: id_qc
-  integer(i_kind),dimension(nchanl),  intent(in   ) :: kmax
+  integer(i_kind),dimension(nchanl),intent(in   ) :: kmax
   real(r_kind),                     intent(in   ) :: zsges
   real(r_kind),                     intent(in   ) :: tzbgr
   real(r_kind),dimension(40,ndat),  intent(inout) :: aivals
@@ -4852,6 +4871,7 @@ subroutine qc_geocsr(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,   &
            if(id_qc(i) == igood_qc)id_qc(i)=ifail_cloud_qc
         end if
      end do
+
 !    If no clouds check surface temperature/emissivity
   else                 ! If no cloud was detected, do surface temp/emiss checks
      sum=zero
@@ -4984,6 +5004,7 @@ subroutine qc_geocsr(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,   &
      end if
      varinv_after_jsfcchk(i) = varinv(i)  !emily
    end do
+ 
 
   return
 
@@ -4991,4 +5012,3 @@ end subroutine qc_geocsr
 
 
 end module qcmod
-

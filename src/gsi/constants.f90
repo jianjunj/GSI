@@ -77,7 +77,7 @@ module constants
   public :: max_filename_length
   public :: z_w_max,tfrozen
   public :: qmin,qcmin,tgmin
-  public :: i_missing, r_missing, s_missing
+  public :: i_missing, r_missing
   public :: tice,t_wfr,e00,rvgas,rdgas,hlv,hlf,cp_vap,c_liq,c_ice,cp_air,cv_air
 
   public :: izero, qimin, qsmin, qgmin,qrmin
@@ -289,7 +289,6 @@ module constants
 ! Constant used to detect missing input value
   integer(i_kind),parameter:: i_missing=-9999
   integer(r_kind),parameter:: r_missing=-9999._r_kind
-  real(r_single),parameter::  s_missing = -9.99e9_r_single
 
 ! Constants initialized
   logical :: constants_initialized = .true.
