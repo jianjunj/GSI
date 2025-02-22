@@ -276,7 +276,7 @@ contains
   use gridmod, only: nsig,regional,get_ij
   use satthin, only: super_val1
   use constants, only: quarter,half,tiny_r_kind,zero,one,deg2rad,rad2deg,one_tenth, &
-      two,three,cg_term,wgtlim,r100,r1000,r10,r0_01,r_missing
+      two,three,cg_term,wgtlim,r100,r1000,r10,r0_01,r_missing, rd_over_cp
   use jfunc, only: jiter,miter,jiterstart
   use sst_retrieval, only: setup_sst_retrieval,avhrr_sst_retrieval,&
       finish_sst_retrieval,spline_cub
@@ -305,6 +305,7 @@ contains
   use sparsearr, only: sparr2, new, writearray, size, fullarray
   use radiance_mod, only: radiance_ex_obserr_gmi,radiance_ex_biascor_gmi
   use cads, only: cads_imager_calc
+  use gridmod, only: fv3_full_hydro
 
   implicit none
 
@@ -363,6 +364,7 @@ contains
   real(r_kind) factch4        !emily   
   real(r_kind) qc4emiss_out   !emily   
   real(r_kind) stability,tcwv,hwp_ratio         
+  real(r_kind) psges
   real(r_kind) si_obs,si_fg                
 ! real(r_kind) si_mean                     
   real(r_kind) total_cloud_cover
@@ -430,6 +432,10 @@ contains
   real(r_kind),dimension(nchanl):: varinv_after_stdchk
   real(r_kind),dimension(nchanl):: varinv_after_stdadj
   real(r_kind) :: pred9,pred10,pred11  !emily
+  real(r_kind),dimension(nsig) :: cloud_fraction_0
+  real(r_kind),dimension(nsig) :: rho_air_0,ni_0,nr_0
+  real(r_kind),dimension(nsig) :: c6_0
+  real(r_kind),dimension(nsig) :: potential_te
 
 !for GMI (dual scan angles)
   real(r_kind),dimension(nchanl):: emissivity2,ts2, emissivity_k2,tsim2
@@ -946,13 +952,17 @@ contains
         tsim_clr=zero
         tcc=zero
         total_cloud_cover=zero
+        psges = zero
         if (radmod%lcloud_fwd) then
           call call_crtm(obstype,dtime,data_s(:,n),nchanl,nreal,ich, &
              tvp,qvp,qs,clw_guess,ciw_guess,rain_guess,snow_guess,prsltmp,prsitmp, &
              trop5,tzbgr,dtsavg,sfc_speed, &
              tsim,emissivity,chan_level,ptau5,ts,emissivity_k, &
                 temp,wmix,jacobian,error_status,tsim_clr=tsim_clr,tcc=tcc, & 
-                tcwv=tcwv,hwp_ratio=hwp_ratio,stability=stability)         
+                tcwv=tcwv,hwp_ratio=hwp_ratio,stability=stability, &
+                cloud_fraction_0=cloud_fraction_0,&
+                rho_air_0=rho_air_0, ni_0=ni_0, nr_0=nr_0, &
+                ps=psges, c6_0=c6_0)         
           if(gmi) then
              gmi_low_angles(1:3)=data_s(ilzen_ang:iscan_ang,n)
              gmi_low_angles(4:5)=data_s(iszen_ang:isazi_ang,n)
@@ -963,7 +973,8 @@ contains
                  trop5,tzbgr,dtsavg,sfc_speed, &
                  tsim2,emissivity2,chan_level,ptau52,ts2,emissivity_k2, &
                  temp2,wmix2,jacobian2,error_status,tsim_clr=tsim_clr2,tcc=tcc,&
-                 tcwv=tcwv,hwp_ratio=hwp_ratio,stability=stability)
+                 tcwv=tcwv,hwp_ratio=hwp_ratio,stability=stability, &
+                 ps=psges)
              ! merge 
              emissivity(10:13)  = emissivity2(10:13)
              ts(10:13)          = ts2(10:13)
@@ -1435,7 +1446,8 @@ contains
 
            call qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse(n),   &
               zsges,cenlat,tb_obsbc1,cosza,clw_obs,tbc,ptau5,emissivity_k,ts, &                   
-              pred,predchan,id_qc,aivals,errf,errf0,clw_obs,varinv,cldeff_obs,cldeff_fg,factch6, & 
+              pred,predchan,id_qc,aivals,errf,errf0,clw_obs,varinv,varinv_sdoei,varinv_grosschk,varinv_after_jsfcchk,varinv_after_sdoei,cldeff_obs,cldeff_fg,factch6,factch4,qc4emiss_out,  &   !emily
+           !  pred,predchan,id_qc,aivals,errf,errf0,clw_obs,varinv,cldeff_obs,cldeff_fg,factch6, &  !orig
               cld_rbc_idx,sfc_speed,error0,clw_guess_retrieval,scatp,radmod)                    
 
 !  If cloud impacted channels not used turn off predictor
@@ -2663,12 +2675,15 @@ contains
                  call nc_diag_metadata_to_single("Sol_Azimuth_Angle",data_s(isazi_ang,n)       ) ! solar azimuth angle (degrees)
                  call nc_diag_metadata_to_single("Sun_Glint_Angle",sgagl                       ) ! sun glint angle (degrees) (sgagl)
                  call nc_diag_metadata_to_single("Scan_Angle",data_s(iscan_ang,n),rad2deg,'*'  ) ! scan angle
-
-                 call nc_diag_metadata_to_single("Water_Fraction",surface(1)%water_coverage    ) ! fractional coverage by water
-                 call nc_diag_metadata_to_single("Land_Fraction",surface(1)%land_coverage      ) ! fractional coverage by land
-                 call nc_diag_metadata_to_single("Ice_Fraction",surface(1)%ice_coverage        ) ! fractional coverage by ice
-                 call nc_diag_metadata_to_single("Snow_Fraction",surface(1)%snow_coverage      ) ! fractional coverage by snow
-                 call nc_diag_metadata_to_single("fractionOfClearPixelsInFOV",cloud_frac       ) ! fractional coverage by snow
+                 !! surface values may be altered in crtm_interface.f90. Save the original one ( without time interpolation)
+                 !call nc_diag_metadata_to_single("Water_Fraction",surface(1)%water_coverage    ) ! fractional coverage by water
+                 !call nc_diag_metadata_to_single("Land_Fraction",surface(1)%land_coverage      ) ! fractional coverage by land
+                 !call nc_diag_metadata_to_single("Ice_Fraction",surface(1)%ice_coverage        ) ! fractional coverage by ice
+                 !call nc_diag_metadata_to_single("Snow_Fraction",surface(1)%snow_coverage      ) ! fractional coverage by snow
+                 call nc_diag_metadata_to_single("Water_Fraction",data_s(ifrac_sea,n)          ) ! fractional coverage by water
+                 call nc_diag_metadata_to_single("Land_Fraction",data_s(ifrac_lnd,n)           ) ! fractional coverage by land
+                 call nc_diag_metadata_to_single("Ice_Fraction",data_s(ifrac_ice,n)            ) ! fractional coverage by ice
+                 call nc_diag_metadata_to_single("Snow_Fraction",data_s(ifrac_sno,n)           ) ! fractional coverage by snow
 
                  if(.not. retrieval)then
                     call nc_diag_metadata_to_single("Water_Temperature",surface(1)%water_temperature  ) ! surface temperature over water (K)
@@ -2716,6 +2731,8 @@ contains
                  call nc_diag_metadata_to_single("TPWC",                  tpwc_obs)                          
                  call nc_diag_metadata_to_single("clw_obs",               clw_obs)                       
                  call nc_diag_metadata_to_single("clw_guess",             clw_guess)                     
+                 call nc_diag_metadata_to_single("ciw_guess",             ciw_guess)                     
+                 call nc_diag_metadata_to_single("TotalColumnVaporGuess", tcwv)
                  call nc_diag_metadata_to_single("factch6",               factch6)                     
                  call nc_diag_metadata_to_single("factch4",               factch4)                       !emily
                  call nc_diag_metadata_to_single("qc4emiss",              qc4emiss_out)                  !emily
@@ -2927,16 +2944,32 @@ contains
                  call nc_diag_metadata_to_single("Sfc_Height",         zsges    )                                       ! do we need this for geoval? I think we do not
 
                  call nc_diag_metadata_to_single("tropopause_pressure", trop5*r1000)                                    ! trop5 is in kPa - convert to Pa for JEDI
+                 call nc_diag_metadata("surface_air_pressure", sngl(psges*r1000) )
+                 call nc_diag_metadata("hwp_ratio", sngl(hwp_ratio) )
 
                  ! Get GeoVaLs for atmosphere
                  call nc_diag_data2d("air_temperature",      atmosphere(1)%temperature)                       ! K 
                  call nc_diag_data2d("air_pressure",         atmosphere(1)%pressure*r100)                  
                  call nc_diag_data2d("air_pressure_levels",  atmosphere(1)%level_pressure*r100)            
-
+                 potential_te = atmosphere(1)%temperature * (1000/atmosphere(1)%pressure)**rd_over_cp
+                 call nc_diag_data2d("air_potential_temperature",  potential_te)            
+                 if (radmod%lprecip .or. fv3_full_hydro) then
+                    call nc_diag_data2d("cloud_area_fraction_in_atmosphere",  cloud_fraction_0)            
+                    call nc_diag_data2d("moist_air_density", rho_air_0(nsig:1:-1))
+                    call nc_diag_data2d("saturated_specific_humidity_profile", qs(nsig:1:-1))
+                    call nc_diag_data2d("specific_humidity", qvp(nsig:1:-1))
+                    call nc_diag_data2d("cloud_ice_number_concentration",ni_0(nsig:1:-1))
+                    call nc_diag_data2d("rain_number_concentration",nr_0(nsig:1:-1))
+                 endif
                  ! Get GeoVaLs for atmospheric absorbers
                  do iabsorb = 1, n_absorbers
                    write (fieldname, "(A,I0.2)") "atmosphere_absorber_", atmosphere(1)%absorber_id(iabsorb)
-                   call nc_diag_data2d(trim(fieldname),      atmosphere(1)%absorber(:,iabsorb))               ! check %absorber_units
+                   if (iabsorb == 1) then
+                      ! Changed the unit of humidity mixing ratio from g/kg to kg/kg in UFO in Oct 2024. JJ. 01/27/2025
+                     call nc_diag_data2d(trim(fieldname),      atmosphere(1)%absorber(:,iabsorb)*1e-3)               ! check %absorber_units
+                   else
+                     call nc_diag_data2d(trim(fieldname),      atmosphere(1)%absorber(:,iabsorb))               ! check %absorber_units
+                   endif
                  enddo
                  ! Get GeoVaLs for hydrometeors 
                  do icloud = 1, n_clouds_fwd_wk
@@ -2944,6 +2977,8 @@ contains
                    call nc_diag_data2d(trim(fieldname),      atmosphere(1)%Cloud(icloud)%Water_Content)    
                    write (fieldname, "(A,I0.2)") "effective_radius_of_cloud_particle_", atmosphere(1)%Cloud(icloud)%Type
                    call nc_diag_data2d(trim(fieldname),      atmosphere(1)%Cloud(icloud)%Effective_Radius) 
+                   write (fieldname, "(A,I0.2)") "mass_mixing_ratio_of_cloud_", atmosphere(1)%Cloud(icloud)%Type
+                   call nc_diag_data2d(trim(fieldname),      atmosphere(1)%Cloud(icloud)%Water_Content/c6_0)
                  enddo
               enddo
 !  if (adp_anglebc) then
