@@ -2980,6 +2980,8 @@ contains
                    call nc_diag_data2d(trim(fieldname),      atmosphere(1)%Cloud(icloud)%Effective_Radius) 
                    write (fieldname, "(A,I0.2)") "mass_mixing_ratio_of_cloud_", atmosphere(1)%Cloud(icloud)%Type
                    call nc_diag_data2d(trim(fieldname),      atmosphere(1)%Cloud(icloud)%Water_Content/c6_0)
+                   write (fieldname, "(A,I0.2)") "atmosphere_column_mass_content_of_cloud_", atmosphere(1)%Cloud(icloud)%Type
+                   call nc_diag_metadata(trim(fieldname),      sum(atmosphere(1)%Cloud(icloud)%Water_Content(:)))
                  enddo
               enddo
 !  if (adp_anglebc) then
