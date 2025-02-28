@@ -472,7 +472,10 @@ contains
   real(r_kind),dimension(7,nobs)   :: imager_cluster_fraction
   real(r_kind),dimension(2,7,nobs) :: imager_cluster_bt
   real(r_kind),dimension(2,nobs)   :: imager_chan_stdev, imager_model_bt
-
+  logical :: save_profile
+  logical :: save_subset_in_allsky
+  save_subset_in_allsky = .false.  ! =true: For all-sky radiances,save data with clouds only.
+                                   ! Always save the whole dataset for other radiances. 
 ! Notations in use: for a single obs. or a single obs. type
 ! nchanl        : a known channel count of a given type obs stream
 ! nchanl_diag   : a subset of "iuse"
@@ -2249,12 +2252,23 @@ contains
 
 
      if(in_curbin) then
+          ! 2/24/2025. Select a number of all-sky observation to save in nc_diag.
+          ! Obs must be made over sea, and with non-zero Ni & NR, and have data passing QC.
+          ! Full data sets are saved for other types of observations.
+          save_profile = .true.
+          if (radmod%lcloud_fwd .and. save_subset_in_allsky) then 
+             save_profile = .false.
+             if (sea .and. minval(abs(id_qc)) == 0 .and. maxval(ni_0) > 100 .and. &
+                     maxval(nr_0) > 100 .and. maxval(cloud_fraction_0) > 0.1 ) then
+                 save_profile = .true.
+             end if 
+          end if 
 
 !       Write diagnostics to output file.
         if (rad_diagsave .and. luse(n) .and. nchanl_diag > 0) then
 
            if (binary_diag) call contents_binary_diag_(odiags(:),is,ioid(n))
-           if (netcdf_diag) call contents_netcdf_diag_(odiags(:),is,ioid(n))
+           if (netcdf_diag .and. save_profile ) call contents_netcdf_diag_(odiags(:),is,ioid(n))
 
         end if
      endif ! (in_curbin)
@@ -2657,7 +2671,6 @@ contains
     allocate(predbias_angord(angord) )
     predbias_angord = zero
   endif
-
               do i=1,nchanl_diag
                  call nc_diag_metadata("Channel_Index",         i                                   )
                  call nc_diag_metadata("Observation_Class",     obsclass                            )
