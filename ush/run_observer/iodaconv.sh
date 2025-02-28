@@ -43,7 +43,7 @@ mkdir -p $IODA_data_iodaoutdir/geovals
 
 #export PYTHONPATH=$GDASApp/build/lib/python3.7/pyioda:$PYTHONPATH
 #export PYTHONPATH=$GDASApp/build/lib/pyiodaconv:$PYTHONPATH
-export PYTHONPATH=$GDASApp/build/lib/python3.7:$PYTHONPATH
+export PYTHONPATH=$GDASApp/build/lib/python3.7
 export PYTHONPATH=$GDASApp/build/lib/python3.7/pyiodaconv:$PYTHONPATH
 #export PYTHONPATH=$GDASApp/iodaconv/src:$PYTHONPATH
 #export PYTHONPATH=$PYTHONPATH:$GDASApp/iodaconv/src
