@@ -195,9 +195,6 @@
   sst_ind = getindex(vars2d, 'sst')
   use_full_hydro = ( ql_ind > 0 .and. qi_ind > 0  .and. &
                      qr_ind > 0 .and. qs_ind > 0 .and. qg_ind > 0 )
-  ! Currently, we do not let precipiation to affect the enkf analysis  
-  ! The following line will be removed after testing
-  use_full_hydro = .false.
 
   if (.not. isinitialized) call init_spec_vars(nlons,nlats,ntrunc,4)
 
@@ -459,9 +456,6 @@
   end if
 
   ! cloud derivatives
-  ! Currently, we do not let precipiation to affect the enkf analysis  
-  ! The following line will be removed after testing
-  use_full_hydro = .true.
   if (.not. use_full_hydro .and. iope==0) then
      if (ql_ind > 0 .or. qi_ind > 0) then
         do k=1,nlevs
@@ -4120,7 +4114,7 @@
      write(charnanal,'(i3.3)') nanal
      sfcbackgroundloop: do nb=1,nbackgrounds
 
-     if (nanal == 0 .and. write_ensmean) then
+     if (nanal == 0 ) then
         filenamein = trim(adjustl(datapath))//trim(adjustl(fgsfcfileprefixes(nb)))//"ensmean"
         filenameout = trim(adjustl(datapath))//trim(adjustl(incsfcfileprefixes(nb)))//"ensmean"
      else

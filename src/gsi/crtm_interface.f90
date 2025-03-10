@@ -892,7 +892,7 @@ endif
     endif ! nvege_type
  endif ! regional or IGBP
     
-! Initial GFDL saturation water vapor pressure tables
+! Initial GFDL saturation water vapor pressure tables 
   if (use_gfdl_qsat) then
      if (n_actual_aerosols_wk>0 .or. n_clouds_fwd_wk>0 .and. imp_physics==11) then
         if (mype==0) write(6,*)myname_,':initial and load GFDL saturation water vapor pressure tables'
@@ -1113,7 +1113,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   use crtm_module, only: limit_exp,o3_id,toa_pressure
   use obsmod, only: iadate
   use aeroinfo, only: nsigaerojac
-  use chemmod, only: lread_ext_aerosol !for separate aerosol input file
+  use chemmod, only: lread_ext_aerosol !for separate aerosol input file 
 
   use crtm_cloudcover_define, only: cloudcover_maximum_overlap, &
                                     cloudcover_random_overlap,  &
