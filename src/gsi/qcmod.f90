@@ -2280,7 +2280,7 @@ subroutine qc_irsnd(nchanl,is,ndat,nsig,ich,sea,land,ice,snow,luse,goessndr,airs
                  *max(zero,cos(pangs*deg2rad))*oneover400
               varinv(i)=tmp*varinv(i)
               varinv_use(i)=tmp*varinv_use(i)
-              if(id_qc(i) == igood_qc)id_qc(i)=ifail_2000_qc
+!emily              if(id_qc(i) == igood_qc)id_qc(i)=ifail_2000_qc
            end if
         end if
      end do
@@ -3294,9 +3294,6 @@ subroutine qc_amsua(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse,   &
      dsval=((2.41_r_kind-0.0098_r_kind*tb_obsbc1)*tbc(ich238) + &
             0.454_r_kind*tbc(ich314)-tbc(ich890))*w1f6
      dsval=max(zero,dsval)
-  end if
-
-  if(sea)then                          
      clwx=cosza*clw*w1f4
   else
      clwx=0.6_r_kind

@@ -1016,7 +1016,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                    tsim,emissivity,chan_level,ptau5,ts, &
                    emissivity_k,temp,wmix,jacobian,error_status,tsim_clr,tcc, &
                    tcwv,hwp_ratio,stability,layer_od,jacobian_aero, &
-                   cloud_fraction_0,ps, rho_air_0, ni_0, nr_0, c6_0)
+                   cloud_fraction_0,psges, rho_air_0, ni_0, nr_0, c6_0)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    call_crtm   creates vertical profile of t,q,oz,p,zs,etc., 
@@ -1149,7 +1149,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   real(r_kind),dimension(nsigaerojac,nchanl),intent(out),optional :: jacobian_aero
   real(r_kind),dimension(nsig,nchanl)   ,intent(  out)  ,optional :: layer_od
   real(r_kind),dimension(nsig)          ,intent(  out)  ,optional :: cloud_fraction_0
-  real(r_kind)                          ,intent(  out)  ,optional :: ps
+  real(r_kind)                          ,intent(  out)  ,optional :: psges
   real(r_kind),dimension(nsig)          ,intent(  out)  ,optional :: rho_air_0   ! density of air (kg/m3)
   real(r_kind),dimension(nsig)          ,intent(  out)  ,optional :: ni_0, nr_0, c6_0
 
@@ -1190,7 +1190,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
   real(r_kind):: wind10,wind10_direction,windratio,windangle 
   real(r_kind):: w00,w01,w10,w11,kgkg_kgm2,f10,panglr,dx,dy
   real(r_kind):: delx,dely,delx1,dely1,dtsig,dtsigp,dtsfc,dtsfcp,dtaer,dtaerp
-  real(r_kind):: sst00,sst01,sst10,sst11,total_od,term,uu5,vv5
+  real(r_kind):: sst00,sst01,sst10,sst11,total_od,term,uu5,vv5, ps
   real(r_kind):: sno00,sno01,sno10,sno11,secant_term
   real(r_kind):: hwp_total,theta_700,theta_sfc,hs
   real(r_kind):: dlon,dlat,dxx,dyy,yy,zz,garea
@@ -1530,6 +1530,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                 psges_itsig (ix,iyp)*w01+psges_itsig (ixp,iyp)*w11)*dtsig + &
                (psges_itsigp(ix,iy )*w00+psges_itsigp(ixp,iy )*w10+ &
                 psges_itsigp(ix,iyp)*w01+psges_itsigp(ixp,iyp)*w11)*dtsigp
+            if (present(psges)) psges = ps
         endif
 
 !       skip loading surface structure if obstype is modis_aod or viirs_aod
@@ -2125,10 +2126,10 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 
      if (n_clouds_fwd_wk>0) then
         kgkg_kgm2=(atmosphere(1)%level_pressure(k)-atmosphere(1)%level_pressure(k-1))*r100/grav
+        c6(k) = kgkg_kgm2
+        if(present(c6_0)) c6_0(k) = c6(k)
         if ((cw_cv.or.ql_cv).and.(.not. lprecip_wk)) then
           if (icmask) then 
-              c6(k) = kgkg_kgm2
-              c6_0(k) = c6(k)
               auxdp(k)=abs(prsi_rtm(kk+1)-prsi_rtm(kk))*r10
               auxq (k)=q(kk2)
 
@@ -2158,8 +2159,6 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
           endif   
         else 
            if (icmask) then
-              c6(k) = kgkg_kgm2  
-              c6_0(k) = c6(k)
               do ii=1,n_clouds_fwd_wk
                 !cloud_cont(k,ii)=cloud(kk2,ii)*kgkg_kgm2 
                  cloud_cont(k,ii)=cloud(kk2,ii)*c6(k)

@@ -306,6 +306,7 @@ contains
   use radiance_mod, only: radiance_ex_obserr_gmi,radiance_ex_biascor_gmi
   use cads, only: cads_imager_calc
   use gridmod, only: fv3_full_hydro
+  use ncepnems_io, only: imp_physics
 
   implicit none
 
@@ -368,7 +369,6 @@ contains
   real(r_kind) si_obs,si_fg                
 ! real(r_kind) si_mean                     
   real(r_kind) total_cloud_cover
-  real(r_kind) cloud_frac 
 
   logical cao_flag                       
   logical hirs2,msu,goessndr,hirs3,hirs4,hirs,amsua,amsub,airs,hsb,goes_img,ahi,mhs,abi
@@ -851,11 +851,6 @@ contains
         zsges=data_s(izz,n)
         nadir = nint(data_s(iscan_pos,n))
         pangs  = data_s(iszen_ang,n)
-        if (iasi) then
-           cloud_frac = data_s(21,n)
-        else 
-           cloud_frac = r_missing
-        end if
 !       Extract warm load temperatures
 !       wltm1 = data_s(isty,n)
 !       wltm2 = data_s(istp,n)
@@ -965,7 +960,7 @@ contains
                 tcwv=tcwv,hwp_ratio=hwp_ratio,stability=stability, &
                 cloud_fraction_0=cloud_fraction_0,&
                 rho_air_0=rho_air_0, ni_0=ni_0, nr_0=nr_0, &
-                ps=psges, c6_0=c6_0)         
+                psges=psges, c6_0=c6_0)         
           if(gmi) then
              gmi_low_angles(1:3)=data_s(ilzen_ang:iscan_ang,n)
              gmi_low_angles(4:5)=data_s(iszen_ang:isazi_ang,n)
@@ -976,8 +971,7 @@ contains
                  trop5,tzbgr,dtsavg,sfc_speed, &
                  tsim2,emissivity2,chan_level,ptau52,ts2,emissivity_k2, &
                  temp2,wmix2,jacobian2,error_status,tsim_clr=tsim_clr2,tcc=tcc,&
-                 tcwv=tcwv,hwp_ratio=hwp_ratio,stability=stability, &
-                 ps=psges)
+                 tcwv=tcwv,hwp_ratio=hwp_ratio,stability=stability)
              ! merge 
              emissivity(10:13)  = emissivity2(10:13)
              ts(10:13)          = ts2(10:13)
@@ -2697,7 +2691,6 @@ contains
                  call nc_diag_metadata_to_single("Land_Fraction",data_s(ifrac_lnd,n)           ) ! fractional coverage by land
                  call nc_diag_metadata_to_single("Ice_Fraction",data_s(ifrac_ice,n)            ) ! fractional coverage by ice
                  call nc_diag_metadata_to_single("Snow_Fraction",data_s(ifrac_sno,n)           ) ! fractional coverage by snow
-                 call nc_diag_metadata_to_single("fractionOfClearPixelsInFOV",cloud_frac       ) ! fractional coverage by snow
 
                  if(.not. retrieval)then
                     call nc_diag_metadata_to_single("Water_Temperature",surface(1)%water_temperature  ) ! surface temperature over water (K)
