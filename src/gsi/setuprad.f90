@@ -287,7 +287,7 @@ contains
       izz,idomsfc,isfcr,iff10,ilone,ilate,n_clouds_fwd_wk,n_absorbers, &
       isst_hires,isst_navy,idata_type,iclr_sky,itref,idtw,idtc,itz_tr
   use qcmod, only: qc_ssmi,qc_geocsr,qc_ssu,qc_avhrr,qc_goesimg,qc_msu,qc_irsnd,qc_amsua,qc_mhs,qc_atms
-  use crtm_interface, only: ilzen_ang2,iscan_ang2,iszen_ang2,isazi_ang2
+  use crtm_interface, only: ilzen_ang2,iscan_ang2,iszen_ang2,isazi_ang2,ilazi_ang2
   use clw_mod, only: calc_clw, ret_amsua, gmi_37pol_diff
   use qcmod, only: igood_qc,ifail_gross_qc,ifail_interchan_qc,ifail_crtm_qc,ifail_satinfo_qc,qc_noirjaco3,ifail_cloud_qc
   use qcmod, only: ifail_cao_qc,cao_check, ifail_clrfrac_geocsr_qc  !emily  
@@ -2676,12 +2676,21 @@ contains
                  call nc_diag_metadata_to_single("Obs_Time",dtime,time_offset,'-')
 
                  call nc_diag_metadata_to_single("Scan_Position",data_s(iscan_pos,n)           ) ! sensor scan position
-                 call nc_diag_metadata_to_single("Sat_Zenith_Angle", zasat,rad2deg,'*') ! satellite zenith angle (degrees)
-                 call nc_diag_metadata_to_single("Sat_Azimuth_Angle",data_s(ilazi_ang,n)       ) ! satellite azimuth angle (degrees)
-                 call nc_diag_metadata_to_single("Sol_Zenith_Angle",pangs                      ) ! solar zenith angle (degrees)
-                 call nc_diag_metadata_to_single("Sol_Azimuth_Angle",data_s(isazi_ang,n)       ) ! solar azimuth angle (degrees)
+                 if (gmi .and. i > 9 ) then  !GMI channels 10 - 13
+                    call nc_diag_metadata_to_single("Sat_Zenith_Angle",   data_s(ilzen_ang2,n),rad2deg,'*') ! satellite zenith angle (degrees)
+                    call nc_diag_metadata_to_single("Sat_Azimuth_Angle",  data_s(ilazi_ang2,n)) ! satellite azimuth angle (degrees)
+                    call nc_diag_metadata_to_single("Sol_Zenith_Angle",   data_s(iszen_ang2,n)) ! solar zenith angle (degrees)
+                    call nc_diag_metadata_to_single("Sol_Azimuth_Angle",  data_s(isazi_ang2,n)) ! solar azimuth angle (degrees)
+                    call nc_diag_metadata_to_single("Scan_Angle",         data_s(iscan_ang2,n),rad2deg,'*'  ) ! scan angle
+                 else
+                    call nc_diag_metadata_to_single("Sat_Zenith_Angle", zasat,rad2deg,'*') ! satellite zenith angle (degrees)
+                    call nc_diag_metadata_to_single("Sat_Azimuth_Angle",data_s(ilazi_ang,n)    ) ! satellite azimuth angle (degrees)
+                    call nc_diag_metadata_to_single("Sol_Zenith_Angle",pangs                   ) ! solar zenith angle (degrees)
+                    call nc_diag_metadata_to_single("Sol_Azimuth_Angle",data_s(isazi_ang,n)    ) ! solar azimuth angle (degrees)
+                    call nc_diag_metadata_to_single("Scan_Angle",data_s(iscan_ang,n),rad2deg,'*'  ) ! scan angle
+                 endif
                  call nc_diag_metadata_to_single("Sun_Glint_Angle",sgagl                       ) ! sun glint angle (degrees) (sgagl)
-                 call nc_diag_metadata_to_single("Scan_Angle",data_s(iscan_ang,n),rad2deg,'*'  ) ! scan angle
+
                  !! surface values may be altered in crtm_interface.f90. Save the original one ( without time interpolation)
                  !call nc_diag_metadata_to_single("Water_Fraction",surface(1)%water_coverage    ) ! fractional coverage by water
                  !call nc_diag_metadata_to_single("Land_Fraction",surface(1)%land_coverage      ) ! fractional coverage by land
