@@ -107,7 +107,7 @@
      factv,factl,factp,factg,factw10m,facthowv,factcldch,niter,niter_no_qc,biascor,&
      init_jfunc,qoption,cwoption,switch_on_derivatives,tendsflag,jiterstart,jiterend,R_option,&
      bcoption,diurnalbc,print_diag_pcg,tsensible,diag_precon,step_start,pseudo_q2,&
-     clip_supersaturation,cnvw_option,hofx_2m_sfcfile
+     clip_supersaturation,cnvw_option,hofx_2m_sfcfile, ignore_2mQM
   use state_vectors, only: init_anasv,final_anasv
   use control_vectors, only: init_anacv,final_anacv,nrf,nvars,nrf_3d,cvars3d,cvars2d,&
      nrf_var,lcalc_gfdl_cfrac,incvars_to_zero,incvars_zero_strat,incvars_efold 
@@ -184,7 +184,8 @@
                             cld_bld_coverage,cld_clr_coverage,&
                             i_cloud_q_innovation,i_ens_mean,DTsTmax,&
                             i_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,i_precip_vertical_check, &
-                            corp_howv, hwllp_howv, corp_gust, hwllp_gust, oerr_gust
+                            corp_howv, hwllp_howv, corp_gust, hwllp_gust, oerr_gust, i_howv_mask, &
+                            i_sfcrough_fgs, corp_vis, hwllp_vis
   use gsi_metguess_mod, only: gsi_metguess_init,gsi_metguess_final
   use gsi_chemguess_mod, only: gsi_chemguess_init,gsi_chemguess_final
   use tcv_mod, only: init_tcps_errvals,tcp_refps,tcp_width,tcp_ermin,tcp_ermax
@@ -1087,9 +1088,16 @@
 !      time_window_rad  - upper limit on time window for certain radiance input data
 !      ext_sonde        - logical for extended forward model on sonde data
 !      l_foreaft_thin -   separate TDR fore/aft scan for thinning
+!      hofx_2m_sfcfile  - Calculate h(x) for q2m and T2m from 
+!                         same fields in sfc_data.tile files
+!                         (for use in global 2m DA) 
+!      ignore_2mQM      - ignore quality mark of 9 (no obs errors)
+!                         for T2m and q2m in prepbufr file, and
+!                         insert hard-coded obs errors (for reanalysis,
+!                         allows use of archived prepbufr files)
 
   namelist/obs_input/dmesh,time_window_max,time_window_rad, &
-       ext_sonde,l_foreaft_thin,hofx_2m_sfcfile
+       ext_sonde,l_foreaft_thin,hofx_2m_sfcfile, ignore_2mQM
 
 ! SINGLEOB_TEST (one observation test case setup):
 !      maginnov   - magnitude of innovation for one ob
@@ -1605,9 +1613,21 @@
 !                           = 0.42 meters (default)
 !      hwllp_howv    - real, background error de-correlation length scale of howv 
 !                           = 170,000.0 meters (default 170 km)
+!      i_howv_mask   - integer, option to control the mask of the wave height (howv) over the land/lake area
+!                           = 0: do not mask (default)
+!                           = 1: mask the value over the land area only (using land mask data)
+!                           = 2: mask the value over the land & lake area (using land mask and lake mask data)
 !      corp_gust     - real, static background error of gust (stddev error)
 !      hwllp_gust    - real, background error de-correlation length scale of gust 
 !      oerr_gust     - real, observation error of gust
+!      i_sfcrough_fgs - integer, option to control the read-in of surface roughness from firstguess
+!                           = 0 : do not read surface roughness from firstguess,
+!                                 and use the default value instead (default)
+!                           = 1 : read surface roughness from firstguess and use it in analysis
+!      corp_vis      - real, static background error of visibility (stddev error),
+!                            in transformed space, not physical space
+!      hwllp_vis     - real, background error de-correlation length scale of visibility
+!                            in transformed space, not physical space
 !
   namelist/rapidrefresh_cldsurf/dfi_radar_latent_heat_time_period, &
                                 metar_impact_radius,metar_impact_radius_lowcloud, &
@@ -1629,7 +1649,8 @@
                                 cld_bld_coverage,cld_clr_coverage,&
                                 i_cloud_q_innovation,i_ens_mean,DTsTmax, &
                                 i_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,i_precip_vertical_check, &
-                                corp_howv, hwllp_howv, corp_gust, hwllp_gust, oerr_gust
+                                corp_howv, hwllp_howv, corp_gust, hwllp_gust, oerr_gust, i_howv_mask, &
+                                i_sfcrough_fgs, corp_vis, hwllp_vis
 
 ! chem(options for gsi chem analysis) :
 !     berror_chem       - .true. when background  for chemical species that require
@@ -2306,6 +2327,8 @@
      write(6,strongopts)
      write(6,obsqc)
      write(6,*)'EXT_SONDE on type 120 =',ext_sonde
+     write(6,*)'hofx_2m_sfcfile =', hofx_2m_sfcfile
+     write(6,*)'ignore_2mQM =', ignore_2mQM
      ngroup=0
      do i=1,ndat
         dthin(i) = max(dthin(i),0)
