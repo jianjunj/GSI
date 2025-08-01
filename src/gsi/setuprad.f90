@@ -277,6 +277,7 @@ contains
   use satthin, only: super_val1
   use constants, only: quarter,half,tiny_r_kind,zero,one,deg2rad,rad2deg,one_tenth, &
       two,three,cg_term,wgtlim,r100,r1000,r10,r0_01,r_missing, rd_over_cp
+  use constants, only: pi
   use jfunc, only: jiter,miter,jiterstart
   use sst_retrieval, only: setup_sst_retrieval,avhrr_sst_retrieval,&
       finish_sst_retrieval,spline_cub
@@ -1060,7 +1061,7 @@ contains
 !       uses total angle dependent bias correction for channels 1 and 2
            do i=1,nchanl
               mm=ich(i)
-              if (goessndr .or. goes_img .or. ahi .or. seviri .or. ssmi .or. ssmis .or. gmi .or. abi) then
+              if (goessndr .or. goes_img .or. ahi .or. seviri .or. ssmi .or. ssmis .or. gmi .or. abi .or. amsr2) then
                  pred(npred,i)=nadir*deg2rad
               else
                  pred(npred,i)=data_s(iscan_ang,n)
@@ -1659,9 +1660,16 @@ contains
   
            sun_azimuth=data_s(isazi_ang,n)
            sun_zenith=data_s(iszen_ang,n)
+           frac_sea=data_s(ifrac_sea,n)
+           bearaz=(data_s(isazi_ang,n)-data_s(ilazi_ang,n))*deg2rad + pi
+           sun_zenith=data_s(iszen_ang,n)*deg2rad
+           sgagl = acos( cos(sun_zenith)*cosza + sin(sun_zenith)*sin(zasat)*cos(bearaz))*rad2deg
 
-           call qc_amsr2(nchanl,zsges,luse(n),sea,kraintype,clw_obs,tsavg5, &
-              tb_obs,sun_azimuth,sun_zenith,amsr2,varinv,aivals(1,is),id_qc)
+           call qc_amsr2(nchanl,zsges,luse(n),sea, &
+              kraintype,clw_obs,tsavg5,tb_obs,sun_azimuth,sun_zenith,amsr2,varinv,aivals(1,is),id_qc, &
+              tzbgr,frac_sea, sgagl,    &
+              radmod%lcloud_fwd, cenlat, sfc_speed,   &
+              tpwc_guess=tcwv,clw_guess_retrieval=clw_guess_retrieval)
 
 !  ---------- GMI  -------------------
 !       GMI Q C
@@ -1716,6 +1724,12 @@ contains
                     endif
                  else if(radmod%rtype == 'gmi') then
                     errf(i) = min(2.0_r_kind*errf(i),ermax_rad(m))
+                 else if(radmod%rtype == 'amsr2') then
+                    if( (i >=7 .and. i <=14) ) then
+                       errf(i) = min(two*errf(i),ermax_rad(m))
+                    else
+                       errf(i) = min(three*errf(i),ermax_rad(m))
+                    endif
                  else if (radmod%rtype/='amsua' .and. radmod%rtype/='atms' .and. radmod%rtype/='gmi' .and. radmod%lcloud4crtm(i)>=0) then
                     errf(i) = three*errf(i)    
                  else 
@@ -1735,7 +1749,7 @@ contains
 !                toss the observation.
                  if(id_qc(i) == igood_qc)id_qc(i)=ifail_gross_qc
                  varinv(i) = zero
-                 if(luse(n))stats(2,m) = stats(2,m) + one
+                 if(luse(n).and. radmod%lcloud4crtm(i)<0 )stats(2,m) = stats(2,m) + one
                  if(luse(n))aivals(7,is) = aivals(7,is) + one
               end if
            end if
@@ -1925,6 +1939,8 @@ contains
                  dradnob = tbcnob(i)*cld_rbc_idx(i)
                  varrad  = tbc(i)*varinv(i)
                  stats(1,m)  = stats(1,m) + one              !number of obs
+                 if (radmod%lcloud4crtm(i)>=0) &
+                 stats(2,m)  = stats(2,m) + cld_rbc_idx(i)   !number of obs for biascor
                  stats(3,m)  = stats(3,m) + drad             !obs-mod(w_biascor)
                  stats(4,m)  = stats(4,m) + tbc0(i)*drad     !(obs-mod(w_biascor))**2
                  stats(5,m)  = stats(5,m) + tbc(i)*varrad    !penalty contribution
@@ -2710,6 +2726,7 @@ contains
                     call nc_diag_metadata_to_single("Soil_Moisture",surface(1)%soil_moisture_content  ) ! soil moisture
                     call nc_diag_metadata("Land_Type_Index",       surface(1)%land_type             ) ! surface land type
                     call nc_diag_metadata("tsavg5",                tsavg5                           ) ! SST first guess used for SST retrieval
+                    call nc_diag_metadata("dtsavg",                dtsavg                           ) ! delta average skin temperature over surface types
                     call nc_diag_metadata("sstcu",                 missing                          ) ! NCEP SST analysis at t
                     call nc_diag_metadata("sstph",                 missing                          ) ! Physical SST retrieval
                     call nc_diag_metadata("sstnv",                 missing                          ) ! Navy SST retrieval

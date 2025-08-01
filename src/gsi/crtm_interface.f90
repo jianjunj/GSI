@@ -2556,15 +2556,15 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 !     enddo
 !     intresult = intresult * dtsig
 !   end function crtm_interface_interp
-  if (n_clouds_fwd_wk > 0) then
-    !JJ. reset water_content to original values for JEDI tests.
-    do ii=1,n_clouds_fwd_wk
-      atmosphere(1)%cloud(ii)%water_content(:) = cloud_cont_0(:,ii)
-       do k = 1,msig
-         atmosphere(1)%cloud(ii)%Effective_Radius(k) =cloudefr_0(k,ii)
-       end do
-    enddo
-  end if
+! if (n_clouds_fwd_wk > 0) then
+!   !JJ. reset water_content to original values for JEDI tests.
+!   do ii=1,n_clouds_fwd_wk
+!     atmosphere(1)%cloud(ii)%water_content(:) = cloud_cont_0(:,ii)
+!      do k = 1,msig
+!        atmosphere(1)%cloud(ii)%Effective_Radius(k) =cloudefr_0(k,ii)
+!      end do
+!   enddo
+! end if
   end subroutine call_crtm
 
   subroutine calc_gfdl_reff(rho_air,tsen,qxmr,cloud_name,reff)
