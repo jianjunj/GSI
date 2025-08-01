@@ -314,6 +314,8 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
          kidsat=271
        else if(jsatid == 'g18' .or. jsatid == 'g18_prep')then
          kidsat=272
+       else if(jsatid == 'g19' .or. jsatid == 'g19_prep')then
+         kidsat=273
        else if(jsatid == 'himawari8')then
          kidsat=173
        else if(jsatid == 'himawari9')then
@@ -405,8 +407,9 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
                (said == 44) .or. (said == 5)  .or. (said == 41)  .or. &
                (said == 42) .or. (said == 43) .or. (said == 722) .or. & 
                (said == 723).or. (said == 265).or. (said == 266) .or. &
-               (said == 267).or. (said == 268).or. (said == 269)) then
-             lexist=.true. 
+               (said == 267).or. (said == 268).or. (said == 269) .or. &
+               (said == 803).or. (said == 804).or. (said == 66)) then
+               lexist=.true. 
              exit gpsloop 
            end if 
            nread = nread + 1
@@ -459,6 +462,8 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
                trim(subset) == 'NC005090' .or. trim(subset) == 'NC005091' .or.&
                trim(subset) == 'NC005067' .or. trim(subset) == 'NC005068' .or. trim(subset) == 'NC005069' .or.&
                trim(subset) == 'NC005047' .or. trim(subset) == 'NC005048' .or. trim(subset) == 'NC005049' .or.&
+               trim(subset) == 'NC005041' .or. trim(subset) == 'NC005042' .or. trim(subset) == 'NC005043' .or.&
+               trim(subset) == 'NC005001' .or. trim(subset) == 'NC005002' .or. trim(subset) == 'NC005003' .or.&
                trim(subset) == 'NC005081' .or. &
                trim(subset) == 'NC005072' ) then
                lexist = .true.
@@ -733,7 +738,8 @@ subroutine read_obs(ndata,mype)
     use obsmod, only: iadate,ndat,time_window,dplat,dsfcalc,dfile,dthin, &
            dtype,dval,dmesh,obsfile_all,ref_obs,nprof_gps,dsis,ditype,&
            perturb_obs,lobserver,lread_obs_save,obs_input_common, &
-           reduce_diag,nobs_sub,dval_use,hurricane_radar,l2rwthin 
+           reduce_diag,nobs_sub,dval_use,hurricane_radar,l2rwthin, &
+           nobs_gps 
     use gsi_nstcouplermod, only: nst_gsi
 !   use gsi_nstcouplermod, only: gsi_nstcoupler_set
     use hdraobmod, only: read_hdraob,nhdt,nhdq,nhduv,nhdps,hdtlist,hdqlist,hduvlist,hdpslist,nodet,nodeq,nodeuv,nodeps
@@ -799,6 +805,7 @@ subroutine read_obs(ndata,mype)
     character(20):: sis
     integer(i_kind) i,j,k,ii,nmind,lunout,isfcalc,ithinx,ithin,nread,npuse,nouse
     integer(i_kind) nprof_gps1,npem1,krsize,len4file,npemax,ilarge,nlarge,npestart
+    integer(i_kind) nobs_gps1
     integer(i_llong) :: lenbytes
     integer(i_kind):: npetot,npeextra,mmdat,nodata
     integer(i_kind):: iworld,iworld_group,next_mype,mm1,iix
@@ -845,6 +852,7 @@ subroutine read_obs(ndata,mype)
     end do
     npem1=npe-1
     nprof_gps1=0
+    nobs_gps1 = 0
 
     if(njqc) then
        call converr_ps_read(mype)
@@ -941,6 +949,7 @@ subroutine read_obs(ndata,mype)
                obstype == 'ahi'       .or. avhrr                  .or.  &
                amsre  .or. ssmis      .or. obstype == 'ssmi'      .or.  &
                obstype == 'ssu'       .or. obstype == 'atms'      .or.  &
+               obstype == 'mws'       .or.                              &
                obstype == 'cris'      .or. obstype == 'cris-fsr'  .or.  &
                obstype == 'amsr2'     .or. obstype == 'viirs-m'   .or.  obstype == 'metimage' .or. &
                obstype == 'gmi'       .or. obstype == 'saphir'   ) then
@@ -1039,6 +1048,8 @@ subroutine read_obs(ndata,mype)
 ! N.B. ATMS must be run on one processor for the filtering code to work.
              else if(obstype == 'atms')then
 !                 parallel_read(i)= .true.
+             else if(obstype == 'mws')then
+!                 parallel_read(i)= .true.
              else if(ssmis)then
 !               parallel_read(i)= .true.  
              else if(seviri)then
@@ -1082,6 +1093,7 @@ subroutine read_obs(ndata,mype)
                    obstype == 'mhs'   .or. obstype == 'hirs3' .or. &
                    obstype == 'cris'  .or. obstype == 'cris-fsr' .or. &
                    obstype == 'iasi'  .or. obstype == 'iasi-ng'  .or. &
+                   obstype == 'mws'   .or.                         &
                    obstype == 'atms') .and. &
                   (dplat(i) == 'n17' .or. dplat(i) == 'n18' .or. & 
                    dplat(i) == 'n19' .or. dplat(i) == 'npp' .or. &
@@ -1092,6 +1104,7 @@ subroutine read_obs(ndata,mype)
           db_possible(i) = ditype(i) == 'rad'  .and.       & 
                   (obstype == 'amsua' .or.  obstype == 'amsub' .or.  & 
                    obstype == 'mhs' .or. obstype == 'atms' .or. &
+                   obstype == 'mws' .or.                        &
                    obstype == 'cris' .or. obstype == 'cris-fsr' .or. &
                    obstype == 'iasi' .or. obstype == 'iasi-ng') .and. &
                   (dplat(i) == 'n17' .or. dplat(i) == 'n18' .or. & 
@@ -1339,7 +1352,7 @@ subroutine read_obs(ndata,mype)
     use_sfc_any=.false.
     loop: do ii=1,mmdat
        i=npe_order(ii)
-       if(ditype(i) == 'rad' .or. ditype(i) == 'sst')then
+       if(ditype(i) == 'rad' .or. dtype(i) == 'sst')then
           mype_io_sfc=mype_root_sub(i)
           use_sfc_any=.true.
           exit loop
@@ -1741,6 +1754,14 @@ subroutine read_obs(ndata,mype)
                      read_rec(i),read_ears_rec(i),read_db_rec(i),dval_use,radmod)
                 string='READ_ATMS'
 
+!            Process mws data
+             else if (obstype == 'mws') then
+                call read_mws(mype,val_dat,ithin,isfcalc,rmesh,dplat(i),gstime,&
+                     infile,lunout,obstype,nread,npuse,nouse,twind,sis, &
+                     mype_root,mype_sub(mm1,i),npe_sub(i),mpi_comm_sub(i),nobs_sub1(1,i),&
+                     read_rec(i),read_ears_rec(i),read_db_rec(i),dval_use,radmod)
+                string='READ_MWS'
+
 !            Process saphir data
              else if (obstype == 'saphir') then
                 call read_saphir(mype,val_dat,ithin,isfcalc,rmesh,dplat(i),gstime,&
@@ -1930,6 +1951,7 @@ subroutine read_obs(ndata,mype)
           else if (ditype(i) == 'gps')then
              call read_gps(nread,npuse,nouse,infile,lunout,obstype,twind, &
                   nprof_gps1,sis,nobs_sub1(1,i))
+                  nobs_gps1 = nouse
              string='READ_GPS'
 
 !         Process aerosol data
@@ -2042,6 +2064,7 @@ subroutine read_obs(ndata,mype)
 
 !   Collect number of gps profiles (needed later for qc)
     call mpi_allreduce(nprof_gps1,nprof_gps,1,mpi_integer,mpi_sum,mpi_comm_world,ierror)
+    call mpi_allreduce(nobs_gps1,nobs_gps,1,mpi_integer,mpi_sum,mpi_comm_world,ierror)
     call mpi_allreduce(nobs_sub1,nobs_sub,npe*ndat,mpi_integer,mpi_sum,mpi_comm_world,& 
          ierror)
 
