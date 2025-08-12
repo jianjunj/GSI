@@ -1527,8 +1527,10 @@ contains
 
            call qc_atms(nchanl,is,ndat,nsig,npred,sea,land,ice,snow,mixed,luse(n),    &
               zsges,cenlat,tb_obsbc1,cosza,clw_obs,tbc,ptau5,emissivity_k,ts, & 
-              pred,predchan,id_qc,aivals,errf,errf0,clw_obs,varinv,cldeff_obs,cldeff_fg,factch6, &
+              pred,predchan,id_qc,aivals,errf,errf0,clw_obs,varinv,varinv_sdoei,varinv_grosschk,varinv_after_jsfcchk,varinv_after_sdoei,cldeff_obs,cldeff_fg,factch6,factch4,qc4emiss_out, & ! emily 
+           !  pred,predchan,id_qc,aivals,errf,errf0,clw_obs,varinv,cldeff_obs,cldeff_fg,factch6, & !orig
               cld_rbc_idx,sfc_speed,error0,clw_guess_retrieval,scatp,radmod)                   
+
 
 !  ---------- GOES imager --------------
 !       GOES imager Q C
