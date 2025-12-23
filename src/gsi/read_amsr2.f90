@@ -26,6 +26,7 @@ subroutine read_amsr2(mype,val_amsr2,ithin,rmesh,jsatid,gstime,&
 !   2017-01-03  todling  - treat save arrays as allocatable
 !   2018-05-21  j.jin    - added time-thinning. Moved the checking of thin4d into satthin.F90.
 !   2025-06-10  j.jin    - Calculate solar zenith angle.
+!   2025-10-10  j.jin    - Read data over all types of surface.
 ! 
 !
 ! input argument list:
@@ -603,9 +604,6 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 
     call deter_sfc(dlat,dlon,dlat_earth,dlon_earth,t4dv,isflg,idomsfc(1),sfcpct, &
          ts,tsavg,vty,vfr,sty,stp,sm,sn,zz,ff10,sfcr)
-
-!   Only keep obs over ocean    - ej
-    if(isflg /= 0) cycle obsloop
 
     crit1 = crit1 + rlndsea(isflg)
     call checkob(dist1,crit1,itx,iuse)
