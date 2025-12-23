@@ -208,7 +208,7 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
       if(iret == 0)then
 
 !        Extract date and check for consistency with analysis date
-         if (idate<iadatebgn.or.idate>iadateend) then
+         if (idate>iadateend) then
             if(offtime_data) then
               write(6,*)'***read_obs_check analysis and data file date differ, but use anyway'
             else
