@@ -134,7 +134,12 @@ public ilazi_ang2           ! = 34 index of local (satellite) azimuth angle (rad
 public iscan_ang2           ! = 35 index of scan (look) angle (radians)
 public iszen_ang2           ! = 36 index of solar zenith angle (degrees)
 public isazi_ang2           ! = 37 index of solar azimuth angle (degrees)
-
+! For AMSR2
+public irfi_flag_1          ! = 34 RFI_flag for channel 1
+public irfi_flag_2          ! = 35 RFI_flag for channel 2
+public irfi_flag_3          ! = 36 RFI_flag for channel 3
+public irfi_flag_4          ! = 37 RFI_flag for channel 4 
+public iacqf_flag           ! = 38 scan_quality_flag
 !  Note other module variables are only used within this routine
 
   character(len=*), parameter :: myname='crtm_interface'
@@ -269,6 +274,12 @@ public isazi_ang2           ! = 37 index of solar azimuth angle (degrees)
  ! are based on a 16 category representation of FAO/STATSGO. 
   integer(i_kind), parameter, dimension(1:SOIL_N_TYPES) :: map_soil_to_crtm=(/1, &
     1, 4, 2, 2, 8, 7, 2, 6, 5, 2, 3, 8, 1, 6, 9/)
+! For AMSR2  
+  integer(i_kind), parameter :: irfi_flag_1=34              ! RFI_flag for channel 1
+  integer(i_kind), parameter :: irfi_flag_2=35              ! RFI_flag for channel 2
+  integer(i_kind), parameter :: irfi_flag_3=36              ! RFI_flag for channel 3
+  integer(i_kind), parameter :: irfi_flag_4=37              ! RFI_flag for channel 4 
+  integer(i_kind), parameter :: iacqf_flag =38
   
 contains
 subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmod)

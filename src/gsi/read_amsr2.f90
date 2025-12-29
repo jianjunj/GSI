@@ -102,7 +102,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   integer(i_kind),parameter :: N_AMSRCH  =  14  ! only channels 1-14 processed
   integer(i_kind) :: said, bufsat = 122 !WMO sat id 
   integer(i_kind) :: siid, AMSR2_SIID = 478   !WMO instrument identifier 
-  integer(i_kind),parameter :: maxinfo    =  33
+  integer(i_kind),parameter :: maxinfo    =  38
 
 ! BUFR file sequencial number
   character(len=8)  :: subset
@@ -159,6 +159,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   integer(i_kind),target,allocatable,dimension(:) :: iorbn_save
   integer(i_kind),target,allocatable,dimension(:) :: inode_save
   integer(i_kind),target,allocatable,dimension(:) :: it_mesh_save
+  real(r_kind),target,allocatable,dimension(:) :: acqf_save
   real(r_kind),target,allocatable,dimension(:) :: dlon_earth_save
   real(r_kind),target,allocatable,dimension(:) :: dlat_earth_save
   real(r_kind),target,allocatable,dimension(:) :: sat_zen_ang_save,sat_az_ang_save
@@ -203,6 +204,16 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   real(r_kind)    :: ptime,timeinflat,crit0
   integer(i_kind) :: ithin_time,n_tbin
   integer(i_kind),pointer:: it_mesh => null()
+  integer(i_kind), parameter :: mxib=16
+  integer(i_kind) :: ibit(mxib), nib
+  real(r_kind)    :: acqf_bufr
+  real(r_kind),target,allocatable,dimension(:,:) :: rfi_save
+  real(r_kind)    :: rfi_flag(kchanl)
+  real(r_kind),pointer :: rfi_flags(:)
+  integer(i_kind), parameter :: mxib_acqf=24
+  integer(i_kind) :: ibit_acqf(mxib), nib_acqf
+  character(len=10) ::  nib_string
+  real(r_kind),pointer :: acqf_flag
 ! ----------------------------------------------------------------------
 ! Initialize variables
 
@@ -262,8 +273,6 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   else
      n_tbin=1
   endif
-! Make thinning grids
-  call makegrids(rmesh,ithin,n_tbin=n_tbin)
 
   inode_save = 0
 
@@ -375,8 +384,41 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
         dlat_earth = clath !* deg2rad
         dlon_earth = clonh !* deg2rad
 
+        call ufbrep(lnbufr,acqf_bufr,1,1,iret, 'ACQF')
+        acqf_save(iobs) = zero
+        if (acqf_bufr > 2.0**16) then
+           call upftbv(lnbufr,'ACQF',acqf_bufr,mxib_acqf,ibit_acqf,nib_acqf)
+           do i = 1, nib_acqf
+              ! In BUFR made by NESDIS
+              acqf_save(iobs) = float(ibit_acqf(i))
+              !if (ibit_acqf(i) == 7) then
+              !! ACQF =7, Quality for this scan is reduced
+              !   cycle read_loop
+              !endif
+           end do
+        else
+           ! In BUFR made in GMAO for GEOS
+           acqf_save(iobs) = acqf_bufr
+        endif
+
 !!       Retrieve bufr 3/4 : get amsrchan 
-        call ufbrep(lnbufr,amsrchan_d,3,14,iret,'SCCF ACQF TMBR')   
+        call ufbrep(lnbufr,amsrchan_d,3,nchanl,iret,'SCCF VIIRSQ TMBR')   
+!!      Get flags for Radio Frequency Interference 
+        rfi_flag = 0
+        do l = 1,nchanl
+           if (amsrchan_d(2,l) > 2**9 ) then
+              ! In BUFR made by NESDIS
+              call upftbv(lnbufr,'VIIRSQ',amsrchan_d(2,l),mxib,ibit,nib)
+              do i = 1, nib
+                 if (ibit(i) == 6) then
+                   rfi_flag(l) = ibit(i)
+                 endif 
+              end do 
+           else
+              ! In BUFR made in GMAO for GEOS
+              rfi_flag(l) = amsrchan_d(2,l)
+           endif
+        end do
 
 !       Set check for TBs outside of limits
         iskip = 0
@@ -411,6 +453,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
         tbob_save(13,iobs)=amsrchan_d(3,13)
         tbob_save(14,iobs)=amsrchan_d(3,14)
 
+        rfi_save(:,iobs) = rfi_flag
         nread=nread+kchanl
 
         sun_zen_ang = gcomspot_d(3)     !solar azimuth angle
@@ -451,6 +494,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   close(lnbufr)
 
   num_obs=iobs-1
+! write(6,*) 'jjj_number_obs=',num_obs
 
   if (do_noise_reduction) then
 
@@ -477,6 +521,8 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
      sun_zen_ang_save(1:num_obs)         = sun_zen_ang_save(sorted_index)
      sun_az_ang_save(1:num_obs)          = sun_az_ang_save(sorted_index)
      tbob_save(:,1:num_obs)              = tbob_save(:,sorted_index)
+     rfi_save(:,1:num_obs)               = rfi_save(:,sorted_index)
+     acqf_save(1:num_obs)                = acqf_save(sorted_index)
 
 !    Do spatial averaging using SSMIS spatial averaging
 
@@ -501,6 +547,8 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   endif ! do_noise_reduction
 
 !========================================================================================================================
+! Make thinning grids
+  call makegrids(rmesh,ithin,n_tbin=n_tbin)
 
 ! Complete thinning for AMSR2
 ! Write header record to scratch file.  Also allocate array
@@ -526,6 +574,8 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
      sun_zen_ang             => sun_zen_ang_save(iobs)
      sun_az_ang          => sun_az_ang_save(iobs)
      tbob                => tbob_save(1:nchanl,iobs)
+     rfi_flags           => rfi_save(1:nchanl,iobs)
+     acqf_flag           => acqf_save(iobs)
 
      if (do_noise_reduction) then
         if (inode == 0) cycle obsloop   ! this indicate duplicated data
@@ -663,6 +713,11 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 
         data_all(32,itx)= val_amsr2
         data_all(33,itx)= itt
+        data_all(34,itx)= rfi_flags(1)               ! RFI_flag for channel 1
+        data_all(35,itx)= rfi_flags(2)               ! RFI_flag for channel 2
+        data_all(36,itx)= rfi_flags(3)               ! RFI_flag for channel 3
+        data_all(37,itx)= rfi_flags(4)               ! RFI_flag for channel 4
+        data_all(38,itx)= acqf_flag                  ! scan_quality_flag
 
         if ( nst_gsi > 0 ) then
            data_all(maxinfo+1,itx) = tref                ! foundation temperature
@@ -731,6 +786,8 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   allocate(crit1_save(maxobs))
   allocate(it_mesh_save(maxobs))
   allocate(tbob_save(kchanl,maxobs))
+  allocate(rfi_save(kchanl,maxobs))
+  allocate(acqf_save(maxobs))
 
   end subroutine init_
 
@@ -748,6 +805,8 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   deallocate(iorbn_save)
   deallocate(iscan_save)
   deallocate(ifov_save)
+  deallocate(rfi_save)
+  deallocate(acqf_save)
 
   end subroutine clean_
 

@@ -289,6 +289,7 @@ contains
       isst_hires,isst_navy,idata_type,iclr_sky,itref,idtw,idtc,itz_tr
   use qcmod, only: qc_ssmi,qc_geocsr,qc_ssu,qc_avhrr,qc_goesimg,qc_msu,qc_irsnd,qc_amsua,qc_mhs,qc_atms
   use crtm_interface, only: ilzen_ang2,iscan_ang2,iszen_ang2,isazi_ang2
+  use crtm_interface, only: irfi_flag_1,irfi_flag_2,irfi_flag_3,irfi_flag_4,iacqf_flag
   use clw_mod, only: calc_clw, ret_amsua, gmi_37pol_diff
   use qcmod, only: igood_qc,ifail_gross_qc,ifail_interchan_qc,ifail_crtm_qc,ifail_satinfo_qc,qc_noirjaco3,ifail_cloud_qc
   use qcmod, only: ifail_crtm_nan  
@@ -2724,6 +2725,13 @@ contains
                  call nc_diag_metadata_to_single("clw_obs",clw_obs                         )
                  call nc_diag_metadata_to_single("clw_guess",clw_guess                       )
 
+                 if (amsr2) then
+                    call nc_diag_metadata_to_single("rfi_flag_ch1", data_s(irfi_flag_1,n))
+                    call nc_diag_metadata_to_single("rfi_flag_ch2", data_s(irfi_flag_2,n))
+                    call nc_diag_metadata_to_single("rfi_flag_ch3", data_s(irfi_flag_3,n))
+                    call nc_diag_metadata_to_single("rfi_flag_ch4", data_s(irfi_flag_4,n))
+                    call nc_diag_metadata_to_single("scan_data_quality", data_s(iacqf_flag,n))
+                 endif
                  if (nstinfo==0) then
                     data_s(itref,n)  = missing
                     data_s(idtw,n)   = missing
