@@ -386,19 +386,12 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 
         call ufbrep(lnbufr,acqf_bufr,1,1,iret, 'ACQF')
         acqf_save(iobs) = zero
-        if (acqf_bufr > 2.0**16) then
+        if (acqf_bufr > 0) then
            call upftbv(lnbufr,'ACQF',acqf_bufr,mxib_acqf,ibit_acqf,nib_acqf)
            do i = 1, nib_acqf
-              ! In BUFR made by NESDIS
               acqf_save(iobs) = float(ibit_acqf(i))
-              !if (ibit_acqf(i) == 7) then
-              !! ACQF =7, Quality for this scan is reduced
-              !   cycle read_loop
-              !endif
+              ! if( ibit_acqf(i) =7) Quality for this scan is reduced
            end do
-        else
-           ! In BUFR made in GMAO for GEOS
-           acqf_save(iobs) = acqf_bufr
         endif
 
 !!       Retrieve bufr 3/4 : get amsrchan 
@@ -406,17 +399,13 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 !!      Get flags for Radio Frequency Interference 
         rfi_flag = 0
         do l = 1,nchanl
-           if (amsrchan_d(2,l) > 2**9 ) then
-              ! In BUFR made by NESDIS
+           if (amsrchan_d(2,l) > 0 ) then
               call upftbv(lnbufr,'VIIRSQ',amsrchan_d(2,l),mxib,ibit,nib)
               do i = 1, nib
                  if (ibit(i) == 6) then
                    rfi_flag(l) = ibit(i)
                  endif 
               end do 
-           else
-              ! In BUFR made in GMAO for GEOS
-              rfi_flag(l) = amsrchan_d(2,l)
            endif
         end do
 
