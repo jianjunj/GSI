@@ -104,9 +104,9 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
 ! Declare local parameters
 
   character(8),parameter:: fov_flag="crosstrk"
-  integer(i_kind),parameter:: n1bhdr=14
+  integer(i_kind),parameter:: n1bhdr=12
   integer(i_kind),parameter:: n2bhdr=4
-  integer(i_kind),parameter:: maxobs = 800000
+  integer(i_kind),parameter:: maxobs = 3000000
   integer(i_kind),parameter:: max_chanl = 24
   real(r_kind),parameter:: r360=360.0_r_kind
   real(r_kind),parameter:: tbmin=50.0_r_kind
@@ -360,7 +360,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
      if(ierr /= 0) cycle ears_db_loop
 
      call openbf(lnbufr,'IN',lnbufr)
-     hdr1b ='SAID FOVN YEAR MNTH DAYS HOUR MINU SECO CLAT CLON CLATH CLONH HMSL SIID'
+     hdr1b ='SAID FOVN YEAR MNTH DAYS HOUR MINU SECO CLATH CLONH SELV SIID'
      hdr2b ='SAZA SOZA BEARAZ SOLAZI'
    
 !    Loop to read bufr file
@@ -390,13 +390,10 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
            rsat=bfr1bhdr(1) 
            ksatid=nint(bfr1bhdr(1))
            if(ksatid /= kidsat) cycle read_subset
-           if(nint(bfr1bhdr(14)) /= eu_mws_id) cycle read_subset
+           if(nint(bfr1bhdr(12)) /= eu_mws_id) cycle read_subset
 
 !          Extract observation location and other required information
-           if(abs(bfr1bhdr(11)) <= 90._r_kind .and. abs(bfr1bhdr(12)) <= r360)then
-              dlat_earth = bfr1bhdr(11)
-              dlon_earth = bfr1bhdr(12)
-           elseif(abs(bfr1bhdr(9)) <= 90._r_kind .and. abs(bfr1bhdr(10)) <= r360)then
+           if(abs(bfr1bhdr(9)) <= 90._r_kind .and. abs(bfr1bhdr(10)) <= r360)then
               dlat_earth = bfr1bhdr(9)
               dlon_earth = bfr1bhdr(10)
            else
@@ -437,7 +434,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
            if(ifov <= nadir)    lza=-lza
 
            panglr=(start+real(ifov-1,r_kind)*step)*deg2rad
-           satellite_height=bfr1bhdr(13)
+           satellite_height=bfr1bhdr(11)
 !          Ensure orbit height is reasonable, 840 km 
            if (satellite_height < 780000.0_r_kind .OR. &
               satellite_height > 900000.0_r_kind) satellite_height = 840000.0_r_kind
@@ -460,11 +457,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
            solazi_save(iob)=bfr2bhdr(4) 
 
 !          Read data record.  Increment data counter
-           call ufbrep(lnbufr,data1b8,1,nchanl,iret,'TMBR')
-           if (iret <= 0) then
-!             Read 'TMBRST' in the sample data.
-              call ufbrep(lnbufr,data1b8,1,nchanl,iret,'TMBRST')
-           endif
+           call ufbrep(lnbufr,data1b8,1,nchanl,iret,'TMBRST')
            bt_save(1:nchanl,iob) = data1b8(1:nchanl)
 
            iob=iob+1
@@ -482,6 +475,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
      write(6,*) 'READ_MWS: No MWS Data were read in'
      return
   end if
+  write(6,*) 'READ_MWS: num_obs=', num_obs
 
 ! Call filtering code 
 
@@ -560,19 +554,6 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
 !    Check FOV and scan-edge usage
      if (.not. use_edges .and. (ifov < radedge_min .OR. ifov > radedge_max )) &
           cycle ObsLoop
-
-     if (maxscan < 96) then
-       ! For ATMS when using the old style satang files, 
-       ! we shift the FOV number down by three as we can only use
-       ! 90 of the 96 positions right now because of the scan bias limitation.
-       ifovmod=ifov-3
-       ! Check that ifov is not out of range of cbias dimension
-       if (ifovmod < 1 .OR. ifovmod > 90) cycle ObsLoop
-     else
-       ! This line is for consistency with previous treatment
-       if (ifov < 4 .OR. ifov > 93) cycle ObsLoop
-       ifovmod=ifov
-     endif
 
      nread=nread+nchanl
      
@@ -770,7 +751,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
 
   call combine_radobs(mype_sub,mype_root,npe_sub,mpi_comm_sub,&
        nele,itxmax,nread,ndata,data_all,score_crit,nrec)
-
+  if( mype_sub==mype_root) write(6,*) 'READ_MWS: after combine_obs, nread,ndata is ',nread,ndata
 ! 
   if(mype_sub==mype_root)then
      do n=1,ndata
