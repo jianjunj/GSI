@@ -1008,8 +1008,12 @@ contains
               if (ieee_is_nan(tsim(i))) then
                   write(*,*) 'NaN for ',trim(isis),' channel ', sc_index(i), ' at latitude = ', &
                           cenlat,' longitude = ',cenlon
+              else 
+                  tsim(i) = ieee_value(tsim(i), ieee_quiet_nan)
               end if
            end do
+           write(*,*) 'Set NaN at other ',trim(isis),' channels since they are not trustworthy at latitude = ', &
+                   cenlat,' longitude = ',cenlon
            id_qc(1:nchanl) = ifail_crtm_nan
            varinv(1:nchanl) = zero
         endif

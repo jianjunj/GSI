@@ -79,7 +79,7 @@ CONTAINS
     Error_Status=0
 
     IF (NChanl > MaxChans) THEN
-       WRITE(0,*) 'Unexpected number of MWS channels: ',nchanl
+       WRITE(6,*) 'Unexpected number of MWS channels: ',nchanl
        Error_Status = 1
        RETURN
     END IF
@@ -88,8 +88,8 @@ CONTAINS
     OPEN(lninfile,file='mws_beamwidth.txt',form='formatted',status='old', &
          iostat=ios)
     IF (ios /= 0) THEN
-       WRITE(*,*) 'Unable to open mws_beamwidth.txt'
-       Error_Status=1
+       WRITE(6,*) 'Unable to open mws_beamwidth.txt'
+       Error_Status=2
        RETURN
     ENDIF
     wmosatid=999
@@ -133,8 +133,8 @@ CONTAINS
        read(lninfile,'(a30)',iostat=ios) Cline
     ENDDO
     IF (wmosatid /= mws1c_h_wmosatid) THEN
-       WRITE(*,*) 'MWS_Spatial_Averaging: sat id not matched in mws_beamwidth.dat'
-       Error_Status=1
+       WRITE(6,*) 'MWS_Spatial_Averaging: sat id not matched in mws_beamwidth.dat'
+       Error_Status=3
        RETURN
     ENDIF
     CLOSE(lninfile)
@@ -192,7 +192,7 @@ CONTAINS
 
     do ichan=1,nchanl
       if(err(ichan) >= 1)then
-         error_status = 1
+         Error_Status = 4
          return
       end if
     end do
