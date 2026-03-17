@@ -2086,6 +2086,13 @@ subroutine qc_amsr2(nchanl,sfchgt,luse,sea, &
         efact = fact*efact
         vfact = fact*vfact
      end if
+! Toss amsr2 data over non-water surface
+     do i=1,nchanl
+        if(id_qc(i)== igood_qc ) then
+           id_qc(i) = ifail_surface_qc
+           varinv(i) = zero
+        endif
+     end do
   end if
 
   return
