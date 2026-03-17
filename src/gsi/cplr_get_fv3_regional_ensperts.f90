@@ -76,6 +76,7 @@ contains
      use netcdf_mod , only: nc_check
      use gsi_rfv3io_mod, only: fv3lam_io_phymetvars3d_nouv
      use obsmod, only: if_model_dbz,if_model_fed
+     use mpi, only : MPI_Wtime, MPI_REAL8, MPI_SUCCESS, MPI_MAX
     
 
      implicit none
@@ -275,7 +276,6 @@ contains
        end if
     end if
 
-
     do m=1,ntlevs_ens
 
 
@@ -452,7 +452,6 @@ contains
            if( .not. parallelization_over_ensmembers )then
               if (mype == 0) write(6,'(a,a)') &
                  'CALL READ_FV3_REGIONAL_ENSPERTS FOR ENS DATA with the filename str : ',trim(ensfilenam_str)
-          
               select case (i_caseflag)
                 case (0)
                   call this%general_read_fv3_regional(fv3_filename,ps,u,v,tv,rh,oz)
@@ -792,6 +791,7 @@ contains
         end do
 
     enddo ! it 4d loop
+
  ! CALCULATE ENSEMBLE SPREAD
     if(write_ens_sprd ) then
         call this%ens_spread_dualres_regional(mype,en_perts,nelen)
@@ -930,6 +930,7 @@ contains
     couplerres=fv3_filenameginput%couplerres
 
 
+    !write(6,'("general_read_fv3_regional: fv3sar_ensemble_opt= " I4)') fv3sar_ensemble_opt
      
      
     if (allocated(fv3lam_ens_io_dynmetvars2d_nouv) ) then   
@@ -956,7 +957,7 @@ contains
     end if
 
      
-    if(fv3sar_ensemble_opt == 0 ) then  
+    if(fv3sar_ensemble_opt == 0 ) then
       call gsi_fv3ncdf_readuv(grd_fv3lam_ens_uv,g_u,g_v,fv3_filenameginput,dual_res)
     else
       call gsi_fv3ncdf_readuv_v1(grd_fv3lam_ens_uv,g_u,g_v,fv3_filenameginput,dual_res)
@@ -1013,6 +1014,8 @@ contains
     endif
      
 !!  tsen2tv  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !$omp parallel do default(none),private(k,i,j) &
+    !$omp shared(grd_ens,g_q,g_tsen,g_tv,fv)
     do k=1,grd_ens%nsig
        do j=1,grd_ens%lon2
           do i=1,grd_ens%lat2
@@ -1023,6 +1026,8 @@ contains
     if (.not.q_hyb_ens) then
       ice=.true.
       iderivative=0
+      !$omp parallel do default(none),private(k,i,j,kp) &
+      !$omp shared(grd_ens,g_prsi,g_prsl)
       do k=1,grd_ens%nsig
         kp=k+1
         do j=1,grd_ens%lon2
@@ -1032,6 +1037,8 @@ contains
         end do
       end do
       call genqsat(g_rh,g_tsen(1,1,1),g_prsl(1,1,1),grd_ens%lat2,grd_ens%lon2,grd_ens%nsig,ice,iderivative)
+      !$omp parallel do default(none),private(k,i,j) &
+      !$omp shared(grd_ens,g_rh,g_q)
       do k=1,grd_ens%nsig
         do j=1,grd_ens%lon2
           do i=1,grd_ens%lat2
@@ -1051,6 +1058,8 @@ contains
 
 
 ! CV transform
+    !$omp parallel do default(none),private(k,i,j) &
+    !$omp shared(grd_ens,l_use_cvpqx,g_qr,cvpqx_pval,g_qs,g_qg,g_qnr,cld_nt_updt,l_cvpnr,cvpnr_pval)
     do k=1,grd_ens%nsig
        do i=1,grd_ens%lon2
           do j=1,grd_ens%lat2
@@ -1101,7 +1110,7 @@ contains
   end subroutine general_read_fv3_regional
 
   subroutine general_read_fv3_regional_parallel_over_ens(this,iope,fv3_filenameginput,g_ps,g_u,g_v,g_tv,g_rh,g_oz, &
-                                                  g_ql,g_qi,g_qr,g_qs,g_qg,g_qnr,g_w,g_dbz,g_fed)
+                                                  g_ql,g_qi,g_qr,g_qs,g_qg,g_w,g_dbz,g_fed)
   !$$$  subprogram documentation block
   !     first compied from general_read_arw_regional           .      .    .                                       .
   ! subprogram:    general_read_fv3_regional  read fv3sar model ensemble members
@@ -1163,7 +1172,7 @@ contains
     type (type_fv3regfilenameg)                  , intent (in)   :: fv3_filenameginput
     real(r_kind),dimension(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig),intent(out)::g_u,g_v,g_tv,g_rh,g_oz
     real(r_kind),dimension(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig),optional,intent(out)::g_ql,g_qi,g_qr,g_dbz,g_fed
-    real(r_kind),dimension(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig),optional,intent(out)::g_qs,g_qg,g_qnr,g_w
+    real(r_kind),dimension(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig),optional,intent(out)::g_qs,g_qg,g_w
 
     real(r_kind),dimension(grd_ens%nlat,grd_ens%nlon),intent(out):: g_ps
     real(r_kind),dimension(grd_ens%nlat,grd_ens%nlon,grd_ens%nsig+1) ::g_prsi 
@@ -1214,19 +1223,19 @@ contains
    
        if(fv3sar_ensemble_opt == 0) then
           if (if_model_dbz .or. if_model_fed) then
-             call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%dynvars,fv3_filenameginput,delp=g_delp,tsen=g_tsen,w=g_w,iope=iope)
-             call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%tracers,fv3_filenameginput,q=g_q,oz=g_oz,ql=g_ql,qr=g_qr,&
+             call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%dynvars,delp=g_delp,tsen=g_tsen,w=g_w,iope=iope)
+             call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%tracers,q=g_q,oz=g_oz,ql=g_ql,qr=g_qr,&
                                                   qs=g_qs,qi=g_qi,qg=g_qg,iope=iope)
              if(if_model_dbz .and. if_model_fed) then
-               call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%phyvars,fv3_filenameginput,dbz=g_dbz,fed=g_fed,iope=iope)
+               call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%phyvars,dbz=g_dbz,fed=g_fed,iope=iope)
              elseif(if_model_dbz) then
-               call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%phyvars,fv3_filenameginput,dbz=g_dbz,iope=iope)
+               call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%phyvars,dbz=g_dbz,iope=iope)
              elseif(if_model_fed) then
-               call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%phyvars,fv3_filenameginput,fed=g_fed,iope=iope)
+               call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%phyvars,fed=g_fed,iope=iope)
              end if
           else
-             call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%dynvars,fv3_filenameginput,delp=g_delp,tsen=g_tsen,iope=iope)         
-             call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%tracers,fv3_filenameginput,q=g_q,oz=g_oz,iope=iope)
+             call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%dynvars,delp=g_delp,tsen=g_tsen,iope=iope)         
+             call gsi_fv3ncdf_read_ens_parallel_over_ens(fv3_filenameginput%tracers,q=g_q,oz=g_oz,iope=iope)
           end if
        else
           write(6,*) "Warning: we can only grab fields from restart files not cold start files for ensemble!"
