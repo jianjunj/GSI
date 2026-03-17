@@ -37,8 +37,9 @@ CONTAINS
 
     ! Declare local parameters
     INTEGER(I_KIND), PARAMETER :: nxmax_mws=128  !Max number of spots per scan line
-    INTEGER(I_KIND), PARAMETER :: nymax_mws=9600 !Max number of lines. Allows 6hrs of MWS.
-                                                 !MWS conducts a scan every 2.254 second.
+    INTEGER(I_KIND), PARAMETER :: nymax_mws=16384 !Max number of lines. Allows 6hrs of MWS.
+                                                  !MWS conducts a scan every 2.254 second.
+                                                  ! 2^( int(log(6hr/2.254s)/log(2)) + 1)=2^14
     integer(i_kind), parameter :: mws1c_h_wmosatid=24
     integer(i_kind), parameter :: lninfile=15
     integer(i_kind), parameter :: max_fov=95

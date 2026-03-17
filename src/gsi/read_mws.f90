@@ -104,9 +104,9 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
 ! Declare local parameters
 
   character(8),parameter:: fov_flag="crosstrk"
-  integer(i_kind),parameter:: n1bhdr=12
+  integer(i_kind),parameter:: n1bhdr=14
   integer(i_kind),parameter:: n2bhdr=4
-  integer(i_kind),parameter:: maxobs = 3000000
+  integer(i_kind),parameter:: maxobs = 1000000
   integer(i_kind),parameter:: max_chanl = 24
   real(r_kind),parameter:: r360=360.0_r_kind
   real(r_kind),parameter:: tbmin=50.0_r_kind
@@ -124,6 +124,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
 
   integer(i_kind) ireadsb,ireadmg,nrec_startx
   integer(i_kind) i,j,k,ntest,iob,llll
+  integer(i_kind) nscan
   integer(i_kind) iret,idate,nchanl,n,idomsfc(1)
   integer(i_kind) ich1,ich2,ich9,ich16,ich17,ich18
   integer(i_kind) kidsat,maxinfo,eu_mws_id
@@ -172,7 +173,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
   real(r_kind), ALLOCATABLE, TARGET :: bt_save(:,:)
 
   integer(i_kind),allocatable,dimension(:):: nrec
-  real(r_double),allocatable,dimension(:):: data1b8
+  real(r_double),allocatable,dimension(:,:):: data1b8
   real(r_double),dimension(n1bhdr):: bfr1bhdr
   real(r_double),dimension(n2bhdr):: bfr2bhdr
 
@@ -182,6 +183,10 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
   real(r_kind)    :: ptime,timeinflat,crit0
   integer(i_kind) :: ithin_time,n_tbin
   integer(i_kind),pointer :: it_mesh => null()
+
+  integer(i_kind), parameter :: mxib=16
+  integer(i_kind) :: ibit(mxib), nib
+  integer(i_kind) :: jchan
 !**************************************************************************
 ! Initialize variables
 
@@ -195,7 +200,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
 
   ilon=3
   ilat=4
-
+  nscan=0
   if(nst_gsi>0) then
      call gsi_nstcoupler_skindepth(obstype,zob)
   endif
@@ -325,7 +330,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
   endif
 
 ! Allocate arrays for BUFR I/O
-  ALLOCATE(data1b8(nchanl))
+  ALLOCATE(data1b8(3,nchanl))
   ALLOCATE(rsat_save(maxobs))
   ALLOCATE(t4dv_save(maxobs))
   ALLOCATE(dlon_earth_save(maxobs))
@@ -360,7 +365,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
      if(ierr /= 0) cycle ears_db_loop
 
      call openbf(lnbufr,'IN',lnbufr)
-     hdr1b ='SAID FOVN YEAR MNTH DAYS HOUR MINU SECO CLATH CLONH SELV SIID'
+     hdr1b ='SAID FOVN YEAR MNTH DAYS HOUR MINU SECO MWSSPF MWSOQF CLATH CLONH SELV SIID'
      hdr2b ='SAZA SOZA BEARAZ SOLAZI'
    
 !    Loop to read bufr file
@@ -385,17 +390,26 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
            if ( llll > 1 ) crit0 = crit0 + r100 * real(llll,r_kind)
 
            call ufbint(lnbufr,bfr1bhdr,n1bhdr,1,iret,hdr1b)
+!          Check MWS overall quality flags (MWSOQF)
+           if(bfr1bhdr(10) > 0.0_r_kind) then
+              call upftbv(lnbufr,'MWSOQF',bfr1bhdr(10),mxib,ibit,nib)
+              do i = 1, nib
+                 if (ibit(i) > 0 .and. ibit(i) /= 5) then
+                    cycle read_loop
+                 endif
+              end do
+           endif
 
 !          Extract satellite id and instrument id.  If not the one we want, read next record
            rsat=bfr1bhdr(1) 
            ksatid=nint(bfr1bhdr(1))
            if(ksatid /= kidsat) cycle read_subset
-           if(nint(bfr1bhdr(12)) /= eu_mws_id) cycle read_subset
+           if(nint(bfr1bhdr(14)) /= eu_mws_id) cycle read_subset
 
 !          Extract observation location and other required information
-           if(abs(bfr1bhdr(9)) <= 90._r_kind .and. abs(bfr1bhdr(10)) <= r360)then
-              dlat_earth = bfr1bhdr(9)
-              dlon_earth = bfr1bhdr(10)
+           if(abs(bfr1bhdr(11)) <= 90._r_kind .and. abs(bfr1bhdr(12)) <= r360)then
+              dlat_earth = bfr1bhdr(11)
+              dlon_earth = bfr1bhdr(12)
            else
               cycle read_loop
            end if
@@ -432,16 +446,17 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
            ifov = nint(bfr1bhdr(2))
            lza = bfr2bhdr(1)*deg2rad      ! local zenith angle
            if(ifov <= nadir)    lza=-lza
+           if(ifov == nadir) nscan = nscan+1 
 
            panglr=(start+real(ifov-1,r_kind)*step)*deg2rad
-           satellite_height=bfr1bhdr(11)
+           satellite_height=bfr1bhdr(13)
 !          Ensure orbit height is reasonable, 840 km 
            if (satellite_height < 780000.0_r_kind .OR. &
               satellite_height > 900000.0_r_kind) satellite_height = 840000.0_r_kind
            rato = one + satellite_height/rearth_equator
            lzaest = asin(rato*sin(panglr))
 
-           if(abs(lza)*rad2deg > MAX_SENSOR_ZENITH_ANGLE) then
+           if(abs(lza)*rad2deg > max_sensor_zenith_angle) then
               write(6,*)'READ_MWS WARNING lza error ',lza,panglr
               cycle read_loop
            end if
@@ -457,8 +472,16 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
            solazi_save(iob)=bfr2bhdr(4) 
 
 !          Read data record.  Increment data counter
-           call ufbrep(lnbufr,data1b8,1,nchanl,iret,'TMBRST')
-           bt_save(1:nchanl,iob) = data1b8(1:nchanl)
+           call ufbrep(lnbufr,data1b8,3,nchanl,iret,'CHNM TMBRST MWSCPF')
+           if (any(data1b8(1,:) >  float(max_chanl)) )then
+              ! Skip obs at this fovn if any channel number is missing.
+              cycle read_loop
+           endif
+           do i = 1, nchanl
+              jchan = nint(data1b8(1,i))
+              bt_save(jchan,iob) = data1b8(2,i)
+              ! Skip checking channel quality (MWSCPF) for now.
+           end do
 
            iob=iob+1
 
@@ -475,8 +498,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
      write(6,*) 'READ_MWS: No MWS Data were read in'
      return
   end if
-  write(6,*) 'READ_MWS: num_obs=', num_obs
-
+  if( mype_sub==mype_root) write(6,*) 'READ_MWS: num_obs=', num_obs, ', nscan=', nscan
 ! Call filtering code 
 
   ALLOCATE(Relative_Time_In_Seconds(Num_Obs))
@@ -735,7 +757,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
   end do ObsLoop
 
 
-  DEALLOCATE(iscan)
+  DEALLOCATE(IScan)
 ! DEAllocate I/O arrays
   DEALLOCATE(rsat_save)
   DEALLOCATE(t4dv_save)
