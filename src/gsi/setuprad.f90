@@ -375,6 +375,7 @@ contains
   logical avhrr,avhrr_navy,viirs,lextra,ssu,iasi,iasing,cris,seviri,atms
   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,amsr2,gmi,saphir
   logical :: mws
+  logical :: amsr3
   logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
   logical sea,mixed,land,ice,snow,toss,l_may_be_passive,eff_area
   logical microwave, microwave_low
@@ -521,6 +522,7 @@ contains
   amsre_hig  = obstype == 'amsre_hig'
   amsre      = amsre_low .or. amsre_mid .or. amsre_hig
   amsr2      = obstype == 'amsr2'
+  amsr3      = obstype == 'amsr3'
   gmi        = obstype == 'gmi'
   ssmis      = obstype == 'ssmis'
   ssmis_las  = obstype == 'ssmis_las'
@@ -540,7 +542,7 @@ contains
 
   microwave=amsua .or. amsub  .or. mhs .or. msu .or. hsb .or. &
             ssmi  .or. ssmis  .or. amsre .or. atms .or. mws .or. &
-            amsr2 .or. gmi  .or.  saphir
+            amsr2 .or. gmi  .or.  saphir .or. amsr3
 
   microwave_low =amsua  .or.  msu .or. ssmi .or. ssmis .or. amsre
 
@@ -1043,7 +1045,8 @@ contains
 !       uses total angle dependent bias correction for channels 1 and 2
            do i=1,nchanl
               mm=ich(i)
-              if (goessndr .or. goes_img .or. ahi .or. seviri .or. ssmi .or. ssmis .or. gmi .or. abi .or. amsr2) then
+              if (goessndr .or. goes_img .or. ahi .or. seviri .or. ssmi .or. ssmis .or. gmi .or. abi .or. amsr2 &
+                      .or. amsr3) then
                  pred(npred,i)=nadir*deg2rad
               else
                  pred(npred,i)=data_s(iscan_ang,n)
@@ -1077,7 +1080,8 @@ contains
               scatp=scat 
            else
               call calc_clw(nadir,tb_obs,tsim,ich,nchanl,no85GHz,amsua,ssmi,ssmis,amsre,atms, &
-                   mws,amsr2,gmi,saphir,tsavg5,sfc_speed,zasat,clw_obs,tpwc_obs,gwp,kraintype,ierrret)
+                   mws,amsr2,amsr3,gmi,saphir,tsavg5,sfc_speed,zasat,clw_obs,tpwc_obs,gwp,kraintype,ierrret)
+!             Note. there is no clw retrieval for amsr3 yet.           
            end if
 
            if (ierrret /= 0) then
@@ -1144,14 +1148,14 @@ contains
            if (.not. newpc4pred) then
               pred(1,i) = r0_01
               pred(2,i) = one_tenth*(one/cosza-one)**2-.015_r_kind
-              if(ssmi .or. ssmis .or. amsre .or. gmi .or. amsr2)pred(2,i)=zero
+              if(ssmi .or. ssmis .or. amsre .or. gmi .or. amsr2 .or. amsr3) pred(2,i)=zero
            else
               pred(1,i) = one
               if (adp_anglebc) then
                  pred(2,i) = zero
               else
                  pred(2,i) = (one/cosza-one)**2
-                 if(ssmi .or. ssmis .or. amsre .or. gmi .or. amsr2)pred(2,i)=zero
+                 if(ssmi .or. ssmis .or. amsre .or. gmi .or. amsr2 .or. amsr3) pred(2,i)=zero
               end if
            end if
 
@@ -1648,6 +1652,21 @@ contains
               tzbgr,frac_sea, sgagl,    &
               radmod%lcloud_fwd, cenlat, sfc_speed,   &
               tpwc_guess=tcwv,clw_guess_retrieval=clw_guess_retrieval)
+
+!  ---------- AMSR3  -------------------
+!       AMSR2 Q C
+
+        else if (amsr3) then
+  
+           sun_azimuth=data_s(isazi_ang,n)
+           sun_zenith=data_s(iszen_ang,n)
+           frac_sea=data_s(ifrac_sea,n)
+           bearaz=(data_s(isazi_ang,n)-data_s(ilazi_ang,n))*deg2rad + pi
+           sun_zenith=data_s(iszen_ang,n)*deg2rad
+           sgagl = acos( cos(sun_zenith)*cosza + sin(sun_zenith)*sin(zasat)*cos(bearaz))*rad2deg
+
+!          There is no quality control subroutine qc_amsr3() yet.
+!          call qc_amsr3()
 
 !  ---------- GMI  -------------------
 !       GMI Q C
@@ -2470,7 +2489,7 @@ contains
               diagbuf(26)  = cldp                             ! cloud top pressure (hPa)
               if (abi) diagbuf(26) = data_s(32,n)             ! cldfrc from bufr
            else
-              if((radmod%lcloud_fwd .and. sea) .or. gmi .or. amsr2) then
+              if((radmod%lcloud_fwd .and. sea) .or. gmi .or. amsr2 .or. amsr3) then
                    diagbuf(25)  = clw_obs                     ! clw (kg/m**2) from retrievals
                    diagbuf(26)  = clw_guess_retrieval         ! retrieved CLWP (kg/m**2) from simulated BT                   
               else
@@ -2725,7 +2744,7 @@ contains
                  call nc_diag_metadata_to_single("clw_obs",clw_obs                         )
                  call nc_diag_metadata_to_single("clw_guess",clw_guess                       )
 
-                 if (amsr2) then
+                 if (amsr2 .or. amsr3) then
                     call nc_diag_metadata_to_single("rfi_flag_ch1", data_s(irfi_flag_1,n))
                     call nc_diag_metadata_to_single("rfi_flag_ch2", data_s(irfi_flag_2,n))
                     call nc_diag_metadata_to_single("rfi_flag_ch3", data_s(irfi_flag_3,n))

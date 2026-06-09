@@ -477,6 +477,7 @@ read_aerosol.f90
 read_ahi.f90
 read_airs.f90
 read_amsr2.f90
+read_amsr3.f90
 read_amsre.f90
 read_anowbufr.f90
 read_atms.f90

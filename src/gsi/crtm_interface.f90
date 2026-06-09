@@ -535,7 +535,7 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmo
    isazi_ang2= 37  ! index of solar azimuth angle (degrees)
    icount = isazi_ang2
    if(dval_use) icount=icount+2
- else if  ( obstype == 'amsr2' ) then
+ else if  ( obstype == 'amsr2' .or. obstype == 'amsr3') then
    icount=ilate+2
  endif
 

@@ -953,7 +953,7 @@ subroutine read_obs(ndata,mype)
                obstype == 'mws'       .or.                              &
                obstype == 'cris'      .or. obstype == 'cris-fsr'  .or.  &
                obstype == 'amsr2'     .or. obstype == 'viirs-m'   .or.  obstype == 'metimage' .or. &
-               obstype == 'gmi'       .or. obstype == 'saphir'   ) then
+               obstype == 'gmi'       .or. obstype == 'saphir'    .or.  obstype == 'amsr3') then
           ditype(i) = 'rad'
        else if (is_extOzone(dfile(i),obstype,dplat(i))) then
           ditype(i) = 'ozone'
@@ -1077,7 +1077,7 @@ subroutine read_obs(ndata,mype)
                 parallel_read(i)= .true.
              else if(obstype == 'ssu' )then
                 parallel_read(i)= .true.
-             else if(obstype == 'amsr2')then    
+             else if(obstype == 'amsr2' .or. obstype=='amsr3')then    
 !                parallel_read(i)= .true.     ! turn parallel read off for spatial averaging
              else if(obstype == 'gmi')then
 !                parallel_read(i)= .true.     ! turn parallel read off for spatial averaging
@@ -1866,6 +1866,14 @@ subroutine read_obs(ndata,mype)
                      mype_root,mype_sub(mm1,i),npe_sub(i),mpi_comm_sub(i),  &
                      nobs_sub1(1,i))
                 string='READ_AMSR2'
+
+!            Process AMSR3 data
+             else if(obstype == 'amsr3')then
+                call read_amsr3(mype,val_dat,ithin,rmesh,dplat(i),gstime,&
+                     infile,lunout,obstype,nread,npuse,nouse,twind,sis,&
+                     mype_root,mype_sub(mm1,i),npe_sub(i),mpi_comm_sub(i),  &
+                     nobs_sub1(1,i))
+                string='READ_AMSR3'
 
 !            Process GOES IMAGER RADIANCE  data
              else if(obstype == 'goes_img') then

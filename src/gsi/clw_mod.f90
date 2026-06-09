@@ -45,7 +45,7 @@ contains
 
 
  subroutine calc_clw(nadir,tb_obs,tsim,ich,nchanl,no85GHz,amsua,ssmi,ssmis,amsre,atms, &   
-          mws,amsr2,gmi,saphir,tsavg5,sfc_speed,zasat,clw,tpwc,gwp,kraintype,ierrret)
+          mws,amsr2,amsr3,gmi,saphir,tsavg5,sfc_speed,zasat,clw,tpwc,gwp,kraintype,ierrret)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:   calc_clw    estimates cloud liquid water for micro. QC
@@ -84,6 +84,7 @@ contains
 !     atms      - flag for atms data
 !     mws       - flag for mws data
 !     amsr2     - flag for amsr2 data
+!     amsr3     - flag for amsr3 data
 !     gmi       - flag for gmi data
 !     saphir    - flag for saphir data
 !     tsavg5    - Surface temperature value
@@ -110,6 +111,7 @@ contains
   real(r_kind),dimension(nchanl)    ,intent(in   ) :: tb_obs,tsim
   integer(i_kind),dimension(nchanl) ,intent(in   ) :: ich
   logical                           ,intent(in   ) :: no85GHz,amsre,ssmi,ssmis,amsua,atms,amsr2,gmi,saphir
+  logical                           ,intent(in   ) :: amsr3
   logical                           ,intent(in   ) :: mws
   real(r_kind)                      ,intent(in   ) :: tsavg5,sfc_speed,zasat
   real(r_kind)                      ,intent(  out) :: clw,tpwc,gwp
@@ -186,6 +188,8 @@ contains
 
      call retrieval_amsr2(tb_obs,nchanl,clw,kraintype,ierrret)
      clw=max(zero,clw)
+  else if (amsr3) then        ! call retrieval_amsr3
+     ! No "retrieval_amsr3()" yet. Return zeros.
 
   else if (saphir) then       ! call retrieval_saphir
     
