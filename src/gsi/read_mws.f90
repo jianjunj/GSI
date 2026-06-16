@@ -184,8 +184,6 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
   integer(i_kind) :: ithin_time,n_tbin
   integer(i_kind),pointer :: it_mesh => null()
 
-  integer(i_kind), parameter :: mxib=16
-  integer(i_kind) :: ibit(mxib), nib
   integer(i_kind) :: jchan
 !**************************************************************************
 ! Initialize variables
@@ -365,7 +363,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
      if(ierr /= 0) cycle ears_db_loop
 
      call openbf(lnbufr,'IN',lnbufr)
-     hdr1b ='SAID FOVN YEAR MNTH DAYS HOUR MINU SECO MWSSPF MWSOQF CLATH CLONH SELV SIID'
+     hdr1b ='SAID FOVN YEAR MNTH DAYS HOUR MINU SECO CLAT CLON CLATH CLONH SELV SIID'
      hdr2b ='SAZA SOZA BEARAZ SOLAZI'
    
 !    Loop to read bufr file
@@ -390,15 +388,6 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
            if ( llll > 1 ) crit0 = crit0 + r100 * real(llll,r_kind)
 
            call ufbint(lnbufr,bfr1bhdr,n1bhdr,1,iret,hdr1b)
-!          Check MWS overall quality flags (MWSOQF)
-           if(bfr1bhdr(10) > 0.0_r_kind) then
-              call upftbv(lnbufr,'MWSOQF',bfr1bhdr(10),mxib,ibit,nib)
-              do i = 1, nib
-                 if (ibit(i) > 0 .and. ibit(i) /= 5) then
-                    cycle read_loop
-                 endif
-              end do
-           endif
 
 !          Extract satellite id and instrument id.  If not the one we want, read next record
            rsat=bfr1bhdr(1) 
@@ -410,6 +399,9 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
            if(abs(bfr1bhdr(11)) <= 90._r_kind .and. abs(bfr1bhdr(12)) <= r360)then
               dlat_earth = bfr1bhdr(11)
               dlon_earth = bfr1bhdr(12)
+           elseif(abs(bfr1bhdr(9)) <= 90._r_kind .and. abs(bfr1bhdr(10)) <= r360)then
+              dlat_earth = bfr1bhdr(9)
+              dlon_earth = bfr1bhdr(10)
            else
               cycle read_loop
            end if
@@ -480,7 +472,6 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
            do i = 1, nchanl
               jchan = nint(data1b8(1,i))
               bt_save(jchan,iob) = data1b8(2,i)
-              ! Skip checking channel quality (MWSCPF) for now.
            end do
 
            iob=iob+1
