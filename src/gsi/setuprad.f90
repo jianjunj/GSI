@@ -292,6 +292,8 @@ contains
   use clw_mod, only: calc_clw, ret_amsua, gmi_37pol_diff
   use qcmod, only: igood_qc,ifail_gross_qc,ifail_interchan_qc,ifail_crtm_qc,ifail_satinfo_qc,qc_noirjaco3,ifail_cloud_qc
   use qcmod, only: ifail_cao_qc,cao_check, ifail_clrfrac_geocsr_qc  !emily  
+  use qcmod, only: ifail_crtm_nan  
+  use qcmod, only: ifail_cao_qc,cao_check  
   use qcmod, only: ifail_iland_det, ifail_isnow_det, ifail_iice_det, ifail_iwater_det, ifail_imix_det, &
                    ifail_iomg_det, ifail_isst_det, ifail_itopo_det,ifail_iwndspeed_det
   use qcmod, only: qc_gmi,qc_saphir,qc_amsr2
@@ -308,6 +310,8 @@ contains
   use cads, only: cads_imager_calc
   use gridmod, only: fv3_full_hydro
   use ncepnems_io, only: imp_physics
+
+  use, intrinsic :: ieee_arithmetic
 
   implicit none
 
@@ -1035,6 +1039,20 @@ contains
            varinv(1:nchanl) = zero
         endif
 
+! Include a separate check for NaNs in CRTM calculations.  These are not always caught by other tests
+
+        if (ANY(ieee_is_nan(tsim(1:nchanl)))) then
+           write(*,*) 'WARNING: NaN found in CRTM simulated radiance output'
+           do i = 1, nchanl
+              if (ieee_is_nan(tsim(i))) then
+                  write(*,*) 'NaN for ',trim(isis),' channel ', sc_index(i), ' at latitude = ', &
+                          cenlat,' longitude = ',cenlon
+              end if
+           end do
+           id_qc(1:nchanl) = ifail_crtm_nan
+           varinv(1:nchanl) = zero
+        endif
+
 !  For SST retrieval, use interpolated NCEP SST analysis
         if (retrieval) then
            if( avhrr_navy )then
@@ -1248,7 +1266,7 @@ contains
 !          tbcnob = obs - guess before bias correction
            tbcnob(i)    = tb_obs(i) - tsim(i)  
            tbc(i)       = tbcnob(i)                     
-
+ 
            do j=1, npred-angord
               tbc(i)=tbc(i) - predbias(j,i) !obs-ges with bias correction
               totbc(i) = totbc(i) + predbias(j,i)
@@ -1531,7 +1549,6 @@ contains
            !  pred,predchan,id_qc,aivals,errf,errf0,clw_obs,varinv,cldeff_obs,cldeff_fg,factch6, & !orig
               cld_rbc_idx,sfc_speed,error0,clw_guess_retrieval,scatp,radmod)                   
 
-
 !  ---------- GOES imager --------------
 !       GOES imager Q C
 !
@@ -1769,6 +1786,12 @@ contains
                        errf(i) = min(2.5_r_kind*errf(i),10.0_r_kind)
                     else
                        errf(i) = min(three*errf(i),10.0_r_kind)
+                    endif
+                 else if(radmod%rtype == 'amsr2') then
+                    if( (i >=7 .and. i <=14) ) then
+                       errf(i) = min(two*errf(i),ermax_rad(m))
+                    else
+                       errf(i) = min(three*errf(i),ermax_rad(m))
                     endif
                  else if(radmod%rtype == 'gmi') then
                     errf(i) = min(2.0_r_kind*errf(i),ermax_rad(m))
@@ -2737,6 +2760,7 @@ contains
     allocate(predbias_angord(angord) )
     predbias_angord = zero
   endif
+
               do i=1,nchanl_diag
                  call nc_diag_metadata("Channel_Index",         i                                   )
                  call nc_diag_metadata("Observation_Class",     obsclass                            )

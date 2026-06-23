@@ -408,7 +408,8 @@ subroutine read_obs_check (lexist,filename,jsatid,dtype,minuse,nread)
                (said == 42) .or. (said == 43) .or. (said == 722) .or. & 
                (said == 723).or. (said == 265).or. (said == 266) .or. &
                (said == 267).or. (said == 268).or. (said == 269) .or. &
-               (said == 803).or. (said == 804).or. (said == 66)) then
+               (said == 803).or. (said == 804).or. (said == 66)  .or. &
+               (said == 768)) then
                lexist=.true. 
              exit gpsloop 
            end if 
@@ -1477,6 +1478,14 @@ subroutine read_obs(ndata,mype)
                    call read_hdraob(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
                         prsl_full,hgtl_full,nobs_sub1(1,i),read_rec(i))
                    string='READ_UPRAIR'
+                else if (index(infile,'wbbufr') /=0)then
+                        call read_gsb(nread,npuse,nouse,infile,obstype,lunout,gstime,twind,sis,&
+                         nobs_sub1(1,i),read_rec(i))
+                    string='READ_GSB'
+                else if (index(infile,'sdbufr') /=0)then
+                        call read_saildrone(nread,npuse,nouse,infile,obstype,lunout,gstime,twind,sis,&
+                         nobs_sub1(1,i),read_rec(i))
+                    string='READ_SAILDRONE'
                 else
                    call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
                         prsl_full,nobs_sub1(1,i),read_rec(i))
@@ -1564,6 +1573,14 @@ subroutine read_obs(ndata,mype)
                   call read_fl_hdob(nread,npuse,nouse,infile,obstype,lunout,gstime,twind,sis,&
                        prsl_full,nobs_sub1(1,i))
                   string='READ_FL_HDOB'
+                else if (index(infile,'wbbufr') /=0)then
+                  call read_gsb(nread,npuse,nouse,infile,obstype,lunout,gstime,twind,sis,&
+                       nobs_sub1(1,i),read_rec(i))
+                  string='READ_GSB'
+                else if (index(infile,'sdbufr') /=0)then
+                  call read_saildrone(nread,npuse,nouse,infile,obstype,lunout,gstime,twind,sis,&
+                       nobs_sub1(1,i),read_rec(i))
+                    string='READ_SAILDRONE'
                 else
                   call read_prepbufr(nread,npuse,nouse,infile,obstype,lunout,twind,sis,&
                      prsl_full,nobs_sub1(1,i),read_rec(i))

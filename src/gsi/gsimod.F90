@@ -32,7 +32,7 @@
      r_hgt_fed
 
   use obsmod, only: lwrite_predterms, &
-     lwrite_peakwt,use_limit,lrun_subdirs,l_foreaft_thin,lobsdiag_forenkf,&
+     lwrite_peakwt,use_limit,lrun_subdirs,l_foreaft_thin,l_tdr_thin_alongbeam,lobsdiag_forenkf,&
      obsmod_init_instr_table,obsmod_final_instr_table
   use obsmod, only: luse_obsdiag
   use obsmod, only: netcdf_diag, binary_diag
@@ -92,7 +92,7 @@
   use qcmod, only: dfact,dfact1,create_qcvars,destroy_qcvars,&
       erradar_inflate,tdrerr_inflate,use_poq7,qc_satwnds,&
       init_qcvars,vadfile,noiqc,c_varqc,gps_jacqc,qc_noirjaco3,qc_noirjaco3_pole,&
-      buddycheck_t,buddydiag_save,njqc,vqc,nvqc,hub_norm,vadwnd_l2rw_qc, &
+      buddycheck_t,buddydiag_save,njqc,vqc,nvqc,hub_norm,vadwnd_l2rw_qc,sfcwndob_biasc,&
       pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres,cao_check, &
       cris_cads, iasi_cads, iasing_cads, airs_cads
   use qcmod, only: troflg,lat_c,nrand
@@ -185,7 +185,7 @@
                             i_cloud_q_innovation,i_ens_mean,DTsTmax,&
                             i_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,i_precip_vertical_check, &
                             corp_howv, hwllp_howv, corp_gust, hwllp_gust, oerr_gust, i_howv_mask, &
-                            i_sfcrough_fgs, corp_vis, hwllp_vis
+                            i_sfcrough_fgs, corp_vis, hwllp_vis, i_gsd_terrain_match_mesonet
   use gsi_metguess_mod, only: gsi_metguess_init,gsi_metguess_final
   use gsi_chemguess_mod, only: gsi_chemguess_init,gsi_chemguess_final
   use tcv_mod, only: init_tcps_errvals,tcp_refps,tcp_width,tcp_ermin,tcp_ermax
@@ -508,6 +508,8 @@
 !  01-07-2022 Hu        Add fv3_io_layout_y to let fv3lam interface read/write subdomain restart
 !                       files. The fv3_io_layout_y needs to match fv3lam model
 !                       option io_layout(2).
+!  2022-04-15  pondeca  add "logical sfcwndob_biasc" for surface wind bias  correction
+!                       based on a modified Kalman-Bucy filter
 !  05-24-2022 H.Wang    Add PM2.5 and AOD DA for regional FV3-CMAQ (RRFS-CMAQ).
 !                       GSI will perform aerosol analysis when 
 !                           1. laeroana_fv3cmaq =  .true.
@@ -1008,6 +1010,8 @@
 !     closest_obs- when true, choose the timely closest surface observation from
 !     multiple observations at a station.  Currently only applied to Ceiling
 !     height and visibility.
+!     sfcwndob_biasc - When true, apply a bias-correction scheme for surface winds
+!                      based on a modified Kalman-Bucy filter
 !     pvis   - power parameter in nonlinear transformation for vis 
 !     pcldch - power parameter in nonlinear transformation for cldch
 !     scale_cv - scaling constant in meter
@@ -1075,7 +1079,7 @@
        vadfile,noiqc,c_varqc,blacklst,use_poq7,hilbert_curve,tcp_refps,tcp_width,&
        tcp_ermin,tcp_ermax,gps_jacqc,qc_noirjaco3,qc_noirjaco3_pole,qc_satwnds,njqc,vqc,nvqc,hub_norm,troflg,lat_c,nrand,&
        aircraft_t_bc_pof,aircraft_t_bc,aircraft_t_bc_ext,biaspredt,upd_aircraft,cleanup_tail,&
-       hdist_aircraft,buddycheck_t,buddydiag_save,vadwnd_l2rw_qc,ompslp_mult_fact,  &
+       hdist_aircraft,buddycheck_t,buddydiag_save,vadwnd_l2rw_qc,ompslp_mult_fact,sfcwndob_biasc,&
        pvis,pcldch,scale_cv,estvisoe,estcldchoe,vis_thres,cldch_thres,cld_det_dec2bin, &
        q_doe_a_136,q_doe_a_137,q_doe_b_136,q_doe_b_137, &
        t_doe_a_136,t_doe_a_137,t_doe_b_136,t_doe_b_137, &
@@ -1088,6 +1092,7 @@
 !      time_window_rad  - upper limit on time window for certain radiance input data
 !      ext_sonde        - logical for extended forward model on sonde data
 !      l_foreaft_thin -   separate TDR fore/aft scan for thinning
+!      l_tdr_thin_alongbeam - apply along-the-beam thinning to TDR data. default: .true.
 !      hofx_2m_sfcfile  - Calculate h(x) for q2m and T2m from 
 !                         same fields in sfc_data.tile files
 !                         (for use in global 2m DA) 
@@ -1097,7 +1102,7 @@
 !                         allows use of archived prepbufr files)
 
   namelist/obs_input/dmesh,time_window_max,time_window_rad, &
-       ext_sonde,l_foreaft_thin,hofx_2m_sfcfile, ignore_2mQM
+       ext_sonde,l_foreaft_thin,l_tdr_thin_alongbeam,hofx_2m_sfcfile, ignore_2mQM
 
 ! SINGLEOB_TEST (one observation test case setup):
 !      maginnov   - magnitude of innovation for one ob
@@ -1628,6 +1633,10 @@
 !                            in transformed space, not physical space
 !      hwllp_vis     - real, background error de-correlation length scale of visibility
 !                            in transformed space, not physical space
+!      i_gsd_terrain_match_mesonet - namelist integer, control application of GSD Terrain Match to MESONET (MSO)
+!                                observations of Temp (188, 195)
+!                          = 0 : do not apply GSD terrain match to MESONET Obs of T (default)
+!                          = 1 : apply GSD terrain match to MESONET Obs of T
 !
   namelist/rapidrefresh_cldsurf/dfi_radar_latent_heat_time_period, &
                                 metar_impact_radius,metar_impact_radius_lowcloud, &
@@ -1650,7 +1659,7 @@
                                 i_cloud_q_innovation,i_ens_mean,DTsTmax, &
                                 i_T_Q_adjust,l_saturate_bkCloud,l_rtma3d,i_precip_vertical_check, &
                                 corp_howv, hwllp_howv, corp_gust, hwllp_gust, oerr_gust, i_howv_mask, &
-                                i_sfcrough_fgs, corp_vis, hwllp_vis
+                                i_sfcrough_fgs, corp_vis, hwllp_vis, i_gsd_terrain_match_mesonet
 
 ! chem(options for gsi chem analysis) :
 !     berror_chem       - .true. when background  for chemical species that require
@@ -2326,9 +2335,7 @@
      write(6,jcopts)
      write(6,strongopts)
      write(6,obsqc)
-     write(6,*)'EXT_SONDE on type 120 =',ext_sonde
-     write(6,*)'hofx_2m_sfcfile =', hofx_2m_sfcfile
-     write(6,*)'ignore_2mQM =', ignore_2mQM
+     write(6,obs_input)
      ngroup=0
      do i=1,ndat
         dthin(i) = max(dthin(i),0)

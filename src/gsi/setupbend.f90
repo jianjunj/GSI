@@ -111,6 +111,7 @@ subroutine setupbend(obsLL,odiagLL, &
 !   2024-12-04  Li       - remove the QC check for rejecting MetOp data <8 km
 !   2024-12-04  Li       - add GRACE-FO (803&804) data 
 !   2024-12-04  Li       - add new obs error model by Chris Riedel
+!   2025-09-08  Li       - add PlanetiQ YAM-8 (768) data
 !
 !   input argument list:
 !     lunin    - unit from which to read observations
@@ -150,7 +151,7 @@ subroutine setupbend(obsLL,odiagLL, &
 
   use gsi_4dvar, only: nobs_bins,hr_obsbin
   use guess_grids, only: ges_lnprsi,hrdifsig,geop_hgti,nfldsig
-  use guess_grids, only: nsig_ext,gpstop,commgpstop,commgpserrinf
+  use guess_grids, only: nsig_ext,gpstop,commgpstop
   use gridmod, only: nsig
   use gridmod, only: get_ij,latlon11
   use constants, only: fv,n_a,n_b,n_c,deg2rad,tiny_r_kind,r0_01,r18,r61,r63,r10000
@@ -674,7 +675,7 @@ subroutine setupbend(obsLL,odiagLL, &
        rdiagbuf(18,i)  = trefges ! temperature at obs location (Kelvin) if monotone grid
        rdiagbuf(21,i)  = qrefges ! specific humidity at obs location (kg/kg) if monotone grid
        commdat=.false.
-       if (data(isatid,i)>=265 .and. data(isatid,i)<=269) commdat=.true.
+       if ( (data(isatid,i)>=265 .and. data(isatid,i)<=269) .or. (data(isatid,i)==768) ) commdat=.true.
        if (.not. qcfail(i)) then ! not SR
 
          ratio_errors(i) = data(ier,i)
@@ -876,7 +877,7 @@ subroutine setupbend(obsLL,odiagLL, &
 
   end do loopoverobs1 ! end of loop over observations
   !$omp end parallel do
-  write(6,'("setupbend: Number of obs considered and accepted " 2I10)') nobs, count(mask=muse/=.false.)
+  !write(6,'("setupbend: Number of obs considered and accepted " 2I10)') nobs, count(mask=muse .neqv. .false.)
 
   if (nobs_out>=1) then
      write(6,*)'WARNING GPSRO:',nobs_out,'obs outside integration grid. Increase nsig_ext to',&

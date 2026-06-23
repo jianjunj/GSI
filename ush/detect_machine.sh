@@ -8,6 +8,11 @@
 #
 # Thank you for your contribution
 
+# Overwrite auto-detect in in container
+if [[ -v SINGULARITY_CONTAINER ]]; then
+  MACHINE_ID=container
+fi
+
 # If the MACHINE_ID variable is set, skip this script.
 [[ -n ${MACHINE_ID:-} ]] && return
 
@@ -21,9 +26,6 @@ case $(hostname -f) in
   dlogin0[1-9].dogwood.wcoss2.ncep.noaa.gov) MACHINE_ID=wcoss2 ;; ### dogwood01-9
   dlogin10.dogwood.wcoss2.ncep.noaa.gov)     MACHINE_ID=wcoss2 ;; ### dogwood10
 
-  gaea5[1-8])          MACHINE_ID=gaeac5 ;; ### gaea51-58
-  gaea5[1-8].ncrc.gov) MACHINE_ID=gaeac5 ;; ### gaea51-58
-
   gaea6[1-8])          MACHINE_ID=gaeac6 ;; ### gaea61-68
   gaea6[1-8].ncrc.gov) MACHINE_ID=gaeac6 ;; ### gaea61-68
 
@@ -31,24 +33,28 @@ case $(hostname -f) in
   hfe1[0-2]) MACHINE_ID=hera ;; ### hera10-12
   hecflow01) MACHINE_ID=hera ;; ### heraecflow01
 
-  s4-submit.ssec.wisc.edu) MACHINE_ID=s4 ;; ### s4
+  ufe0[1-9]) MACHINE_ID=ursa ;; ### ursa01-09
+  ufe1[0-2]) MACHINE_ID=ursa ;; ### ursa10-12
+  uecflow01) MACHINE_ID=ursa ;; ### ursaecflow01
 
-  fe[1-8]) MACHINE_ID=jet ;; ### jet01-8
-  tfe[12]) MACHINE_ID=jet ;; ### tjet1-2
+  der*) MACHINE_ID=derecho ;; ### derecho[1-8]
+  dec*) MACHINE_ID=derecho ;; ### decxxx computing node
+
+  ip-*|compute-dy-*|processing-dy-*)
+    case ${PW_CSP:-} in
+      "aws" | "google" | "azure") MACHINE_ID=noaacloud ;;
+      *) MACHINE_ID=aws-ec2 ;;
+    esac
+    ;;
 
   Orion-login-[1-4].HPC.MsState.Edu) MACHINE_ID=orion ;; ### orion1-4
 
   [Hh]ercules-login-[1-4].[Hh][Pp][Cc].[Mm]s[Ss]tate.[Ee]du) MACHINE_ID=hercules ;; ### hercules1-4
 
-  login[1-4].stampede2.tacc.utexas.edu) MACHINE_ID=stampede ;; ### stampede1-4
-
-  login0[1-2].expanse.sdsc.edu) MACHINE_ID=expanse ;; ### expanse1-2
-
-  discover3[1-5].prv.cube) MACHINE_ID=discover ;; ### discover31-35
   *) MACHINE_ID=UNKNOWN ;;  # Unknown platform
 esac
 
-if [[ ${MACHINE_ID} == "UNKNOWN" ]]; then 
+if [[ ${MACHINE_ID} == "UNKNOWN" ]]; then
    case ${PW_CSP:-} in
       "aws" | "google" | "azure") MACHINE_ID=noaacloud ;;
       *) PW_CSP="UNKNOWN"
@@ -64,21 +70,20 @@ if [[ "${MACHINE_ID}" != "UNKNOWN" ]]; then
 fi
 
 # Try searching based on paths since hostname may not match on compute nodes
-if [[ -d /opt/spack-stack ]]; then
-  # We are in a container
-  MACHINE_ID=container
-elif [[ -d /lfs/h3 ]]; then
+if [[ -d /lfs/h3 ]]; then
   # We are on NOAA Cactus or Dogwood
   MACHINE_ID=wcoss2
 elif [[ -d /lfs/h1 && ! -d /lfs/h3 ]]; then
   # We are on NOAA TDS Acorn
   MACHINE_ID=acorn
-elif [[ -d /mnt/lfs5 ]]; then
-  # We are on NOAA Jet
-  MACHINE_ID=jet
-elif [[ -d /scratch1 ]]; then
-  # We are on NOAA Hera
-  MACHINE_ID=hera
+elif [[ -d /scratch3 ]]; then
+  # We are on NOAA Hera or Ursa
+  mount=$(findmnt -n -o SOURCE /home)
+  if [[ ${mount} =~ "ursa" ]]; then
+    MACHINE_ID=ursa
+  else
+    MACHINE_ID=hera
+  fi
 elif [[ -d /work ]]; then
   # We are on MSU Orion or Hercules
   mount=$(findmnt -n -o SOURCE /home)
@@ -87,15 +92,15 @@ elif [[ -d /work ]]; then
   else
     MACHINE_ID=orion
   fi
-elif [[ -d /gpfs/f5 ]]; then
-  # We are on GAEAC5.
-  MACHINE_ID=gaeac5
 elif [[ -d /gpfs/f6 ]]; then
   # We are on GAEAC6.
   MACHINE_ID=gaeac6
-elif [[ -d /data/prod ]]; then
-  # We are on SSEC's S4
-  MACHINE_ID=s4
+elif [[ -d /gpfs/csfs1 ]]; then
+  # We are on NCAR DERECHO.
+  MACHINE_ID=derecho
+elif [[ -d /opt/spack-stack && -d /lustre ]]; then
+  # We are on AWS ec2
+  MACHINE_ID=aws-ec2
 else
   echo WARNING: UNKNOWN PLATFORM 1>&2
 fi

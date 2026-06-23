@@ -1,5 +1,6 @@
 list(APPEND GSI_SRC_C
 blockIO.c
+crc32_c.c
 )
 
 # Class files for WRF interfaces
@@ -265,6 +266,7 @@ guess_grids.F90
 half_nmm_grid2.f90
 hdraobmod.f90
 hilbert_curve.f90
+crc32.F90
 hybrid_ensemble_isotropic.F90
 hybrid_ensemble_parameters.f90
 inc2guess.f90
@@ -497,6 +499,7 @@ read_goesimg.f90
 read_goesimgr_skycover.f90
 read_goesndr.f90
 read_gps.f90
+read_gsb.f90
 read_guess.F90
 read_iasi.f90
 read_iasing.f90
@@ -512,12 +515,13 @@ read_obs.F90
 read_ozone.f90
 read_pblh.f90
 read_pcp.f90
-read_prepbufr.f90
+read_prepbufr.F90
 read_radar.f90
 read_radar_wind_ascii.f90
 read_radarref_mosaic.f90
 read_radarref_mosaic_directDA.f90
 read_rapidscat.f90
+read_saildrone.f90
 read_saphir.f90
 read_satmar.f90
 read_satwnd.f90

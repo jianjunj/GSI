@@ -123,6 +123,8 @@ module rapidrefresh_cldsurf_mod
 !                          rejection list
 !                         =0 . EMC method (default)
 !                         =1 . GSD method
+!                         =2 . expansion of GSD method to include provider/subprovider
+!                              based criteria and diurnal accept lists
 !      i_lightpcp        - options for how to deal with light precipitation
 !                         =0 . don't add light precipitation (default)
 !                         =1 . add light precipitation in warm section
@@ -249,6 +251,10 @@ module rapidrefresh_cldsurf_mod
 !                          = 0 (vis-off: default) : no analysis of visibility in 3D analysis.
 !                          = 1 (vis-on) : if variable name "vis" is found in anavinfo,
 !                                          set it to be 1 to turn on analysis of visibility;
+!      i_gsd_terrain_match_mesonet - namelist integer, control application of GSD Terrain Match to MESONET (MSO)
+!                                observations of Temp (188, 195)
+!                          = 0 : do not apply GSD terrain match to MESONET Obs of T (default)
+!                          = 1 : apply GSD terrain match to MESONET Obs of T
 !
 ! attributes:
 !   language: f90
@@ -328,6 +334,7 @@ module rapidrefresh_cldsurf_mod
   public :: i_sfcrough_fgs
   public :: corp_vis, hwllp_vis
   public :: i_vis_3dda
+  public :: i_gsd_terrain_match_mesonet
 
   logical l_hydrometeor_bkio
   real(r_kind)  dfi_radar_latent_heat_time_period
@@ -394,6 +401,7 @@ module rapidrefresh_cldsurf_mod
   integer(i_kind)   :: i_sfcrough_fgs
   real(r_kind)      :: corp_vis, hwllp_vis
   integer(i_kind)   :: i_vis_3dda
+  integer(i_kind)   :: i_gsd_terrain_match_mesonet
 
 contains
 
@@ -542,6 +550,8 @@ contains
                                                       ! "rapidrefresh_cldsurf" of GSI namelist file
 
     i_vis_3dda          = 0                           ! no analysis of visibility (vis) in 3D analysis (default)
+
+    i_gsd_terrain_match_mesonet = 0                   ! no GSD terrain match applied to METSONET obs (default)
 
 !-- searching for specific variable in state variable list (reading from anavinfo)
     do i2=1,ns2d
