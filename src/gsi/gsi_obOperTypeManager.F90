@@ -353,6 +353,7 @@ function dtype2index_(dtype) result(index_)
     case("ssmis_env"); index_= iobOper_rad
         !
     case("amsr2"  ); index_= iobOper_rad
+    case("amsr3"  ); index_= iobOper_rad
     case("goes_img"); index_= iobOper_rad
     case("gmi"    ); index_= iobOper_rad
     case("seviri" ); index_= iobOper_rad

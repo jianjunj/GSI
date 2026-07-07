@@ -190,6 +190,7 @@ contains
      clw=max(zero,clw)
   else if (amsr3) then        ! call retrieval_amsr3
      ! No "retrieval_amsr3()" yet. Return zeros.
+     clw=max(zero,clw)
 
   else if (saphir) then       ! call retrieval_saphir
     

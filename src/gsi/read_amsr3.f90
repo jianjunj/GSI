@@ -5,8 +5,7 @@ subroutine read_amsr3(mype,val_amsr3,ithin,rmesh,jsatid,gstime,&
 ! subprogram:    read_amsr3                  read bufr format amsr3 data
 !   prgmmr: ejones         copied from read_amsre.f90         date: 2014-03-15
 ! abstract:  This routine reads BUFR format AMSR3 radiance (brightness
-!            temperature) files that contain the first 14 channels of AMSR3 
-!            (all at the same resolution).
+!            temperature)
 !
 !            When running the gsi in regional mode, the code only
 !            retains those observations that fall within the regional
@@ -86,7 +85,7 @@ subroutine read_amsr3(mype,val_amsr3,ithin,rmesh,jsatid,gstime,&
 integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 
 ! Number of channels for sensors in BUFR
-  integer(i_kind),parameter :: N_AMSRCH  =  21
+  integer(i_kind),parameter :: N_AMSRCH  = 19
   integer(i_kind) :: said, bufsat = 142 !WMO sat id 
   integer(i_kind) :: siid, AMSR3_SIID = 477   !WMO instrument identifier 
   integer(i_kind),parameter :: maxinfo    =  38
@@ -171,13 +170,10 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 ! BUFR format for AMSRSPOT
   integer(i_kind),parameter :: N_AMSRSPOT_LIST = 13
 
-! BUFR format for AMSRCHAN
-  integer(i_kind),parameter :: N_AMSRCHAN_LIST = 3
-
 ! Variables for BUFR IO
   real(r_double),dimension(4):: gcomspot_d
   real(r_double),dimension(13):: amsrspot_d               
-  real(r_double),dimension(3,14):: amsrchan_d             
+  real(r_double),dimension(3,jchanl):: amsrchan_d             
 
 ! ---- For sun zenith and glint angles  ----
   integer(i_kind):: doy,mday(12),mon,m,mlen(12)
@@ -233,14 +229,12 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   nread = 0
   sstime = zero
 !   
-  kchamsr3(1:19)=(/1,2,3,4,5,6,7,8,9,10, &
-                  11,12,13,14,15,16,19,20,21/)
 ! There are 19 channels in BUFR, and 21 channels in CRTM.
 ! Their orders for H & V polarizations are different.
 ! Bridge channel numbers in BUFR => channel numbers in CRTM and GSI
   jchamsr3(1:19)=(/2,1,4,3,6,5,8,7,10,9, &
                    12,11,14,13,16,15, &
-                   19,20,21/)   
+                   17,18,19/)   
 
   senname = 'AMSR'
   nscan  = 243  
@@ -596,8 +590,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
     end do
     kskip = 0
     do l=1,nchanl
-        kch=kchamsr3(l)
-        if(tbob(kch)<tbmin .or. tbob(kch)>tbmax)then
+        if(tbob(l)<tbmin .or. tbob(l)>tbmax)then
            kskip = kskip + 1
         endif
     end do
