@@ -278,9 +278,12 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   irec=0
   iobs=1
   do while(ireadmg(lnbufr,subset,idate)>=0)
-     if ( subset /= 'NC021248') then
-        cycle
-     endif
+
+! j.jin, AMSR3 accidently saved into subset 'NC021247' which is for AMSR2 in NCEP BUFR.
+!    if ( subset /= 'NC021248') then
+!        cycle
+!    endif
+
      irec=irec+1
      next=next+1
      if(next == npe_sub)next=0
