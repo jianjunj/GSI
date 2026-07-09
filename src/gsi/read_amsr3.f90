@@ -229,9 +229,9 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   nread = 0
   sstime = zero
 !   
-! There are 19 channels in BUFR, and 21 channels in CRTM.
-! Their orders for H & V polarizations are different.
-! Bridge channel numbers in BUFR => channel numbers in CRTM and GSI
+! The polaritions are H, V, H, V ..... for channels 1- 16 in BUFR,
+! but, they are V, H, V, H ...... in  CRTM coefficient files. Therefore,
+! We switch polarizations (channels numbers) after reading those data.
   jchamsr3(1:19)=(/2,1,4,3,6,5,8,7,10,9, &
                    12,11,14,13,16,15, &
                    17,18,19/)   
