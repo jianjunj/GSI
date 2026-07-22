@@ -234,7 +234,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 ! We switch polarizations (channels numbers) after reading those data.
   jchamsr3(1:19)=(/2,1,4,3,6,5,8,7,10,9, &
                    12,11,14,13,16,15, &
-                   17,18,19/)   
+                   17,19,18/)   
 
   senname = 'AMSR'
   nscan  = 243  
