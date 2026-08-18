@@ -567,7 +567,7 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
 !    Check FOV and scan-edge usage
      if (.not. use_edges .and. (ifov < radedge_min .OR. ifov > radedge_max )) &
           cycle ObsLoop
-
+     ifovmod=ifov
      nread=nread+nchanl
      
 !    Transfer observed brightness temperature to work array.  If any
