@@ -1001,7 +1001,7 @@ contains
              tvp,qvp,qs,clw_guess,ciw_guess,rain_guess,snow_guess,prsltmp,prsitmp, &
              trop5,tzbgr,dtsavg,sfc_speed, &
              tsim,emissivity,chan_level,ptau5,ts,emissivity_k, &
-             temp,wmix,jacobian,error_status)
+             temp,wmix,jacobian,error_status,psges=psges)
           if(gmi) then
              gmi_low_angles(1:3)=data_s(ilzen_ang:iscan_ang,n)
              gmi_low_angles(4:5)=data_s(iszen_ang:isazi_ang,n)

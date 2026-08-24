@@ -1526,13 +1526,13 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
            dtskin(3) = dtsavg
         end if
 
-        if (n_clouds_fwd_wk>0) then
+!       if (n_clouds_fwd_wk>0) then
             ps=(psges_itsig (ix,iy )*w00+psges_itsig (ixp,iy )*w10+ &
                 psges_itsig (ix,iyp)*w01+psges_itsig (ixp,iyp)*w11)*dtsig + &
                (psges_itsigp(ix,iy )*w00+psges_itsigp(ixp,iy )*w10+ &
                 psges_itsigp(ix,iyp)*w01+psges_itsigp(ixp,iyp)*w11)*dtsigp
             if (present(psges)) psges = ps
-        endif
+!       endif
 
 !       skip loading surface structure if obstype is modis_aod or viirs_aod
         if ( trim(obstype) /= 'modis_aod' .and. trim(obstype) /= 'viirs_aod' ) then
