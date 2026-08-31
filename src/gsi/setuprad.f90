@@ -434,6 +434,7 @@ contains
   logical,dimension(nobs):: luse
   integer(i_kind),dimension(nobs):: ioid ! initial (pre-distribution) obs ID
   integer(i_kind):: nperobs,ncr
+  integer(i_kind):: ich37v,ich37h  ! numbers of 37V & 37H GHz channels
 
   character(10) filex
   character(12) string
@@ -555,6 +556,14 @@ contains
   l_may_be_passive = .false.
   toss = .true.
   jc=0
+
+  if(gmi) then
+     ich37v = 6
+     ich37h = 7
+  else if(amsr3) then
+     ich37v = 14
+     ich37h = 13
+  endif
 
   do j=1,jpch_rad
      channel_passive(j)=iuse_rad(j)==-1 .or. iuse_rad(j)==0
@@ -1298,9 +1307,11 @@ contains
 
            if(amsua.or.atms .or. mws) then
               call ret_amsua(tsim_bc,nchanl,tsavg5,zasat,clw_guess_retrieval,ierrret)
-           else if(gmi) then
-              call gmi_37pol_diff(tsim(6),tsim(7),tsim_clr(6),tsim_clr(7),clw_guess_retrieval,ierrret)
-              call gmi_37pol_diff(tb_obs(6),tb_obs(7),tsim_clr(6),tsim_clr(7),clw_obs,ierrret)
+           else if(gmi .or. amsr3) then
+              call gmi_37pol_diff(tsim(ich37v),tsim(ich37h),tsim_clr(ich37v),tsim_clr(ich37h),&
+                      clw_guess_retrieval,ierrret)
+              call gmi_37pol_diff(tb_obs(ich37v),tb_obs(ich37h),tsim_clr(ich37v),tsim_clr(ich37h),&
+                      clw_obs,ierrret)
            end if
            if (radmod%ex_obserr=='ex_obserr1') then
               call radiance_ex_biascor(radmod,nchanl,tsim_bc,tsavg5,zasat, &

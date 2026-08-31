@@ -113,7 +113,6 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   integer(i_kind)   :: ilat, ilon   
   integer(i_kind)   :: i, l, n
   integer(i_kind),dimension(kchanl) :: kchamsr3
-  integer(i_kind),dimension(jchanl) :: jchamsr3
   integer(i_kind)   :: jch
   real(r_kind)     :: sfcr
   real(r_kind)     :: dlon, dlat
@@ -228,13 +227,6 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
   nodata = 0
   nread = 0
   sstime = zero
-!   
-! The polaritions are H, V, H, V ..... for channels 1- 16 in BUFR,
-! but, they are V, H, V, H ...... in  CRTM coefficient files. Therefore,
-! We switch polarizations (channels numbers) after reading those data.
-  jchamsr3(1:19)=(/2,1,4,3,6,5,8,7,10,9, &
-                   12,11,14,13,16,15, &
-                   17,19,18/)   
 
   senname = 'AMSR'
   nscan  = 243  
@@ -392,12 +384,11 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
 !!      Get flags for Radio Frequency Interference 
         rfi_flag = 0
         do l = 1,jchanl
-           jch=jchamsr3(l)
            if (amsrchan_d(2,l) > 0 ) then
               call upftbv(lnbufr,'VIIRSQ',amsrchan_d(2,l),mxib,ibit,nib)
               do i = 1, nib
                  if (ibit(i) == 6) then
-                   rfi_flag(jch) = ibit(i)
+                   rfi_flag(l) = ibit(i)
                  endif 
               end do 
            endif
@@ -414,8 +405,7 @@ integer(i_kind),dimension(npe)  ,intent(inout) :: nobs
         if(iskip == jchanl) cycle read_loop
 
         do l=1,jchanl
-           jch=jchamsr3(l)
-           tbob_save(jch,iobs)=amsrchan_d(3,l)
+           tbob_save(l,iobs)=amsrchan_d(3,l)
         end do
         rfi_save(:,iobs) = rfi_flag
         nread=nread+jchanl

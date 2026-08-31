@@ -371,8 +371,6 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmo
   integer(i_kind) :: n_absorbers
   logical quiet
   logical print_verbose
-  logical :: amsr3_crtm_exists
-  character(200) :: amsr3_crtm_file
 
   use_gfdl_qsat=.false.
   print_verbose=.false.
@@ -597,28 +595,6 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmo
  sensorlist(1)=isis
  quiet=.not. print_verbose
 
-! J.Jin. (Temporary) CRTM coefficient files for AMSR3 have a sensor name "amsr3_gosat-gw_box".
- if (trim(adjustl(sensorlist(1))) == 'amsr3_gosat-gw') then
-    if( crtm_coeffs_path /= "" ) then
-       amsr3_crtm_file = crtm_coeffs_path//'amsr3_gosat-gw.SpcCoeff.bin'
-       INQUIRE(FILE=trim(amsr3_crtm_file), EXIST=amsr3_crtm_exists)
-       if( .not. amsr3_crtm_exists ) then
-          amsr3_crtm_file = crtm_coeffs_path//'amsr3_gosat-gw.SpcCoeff.nc'
-          INQUIRE(FILE=trim(amsr3_crtm_file), EXIST=amsr3_crtm_exists)
-       endif
-    else
-       amsr3_crtm_file = 'amsr3_gosat-gw.SpcCoeff.bin'
-       INQUIRE(FILE=trim(amsr3_crtm_file), EXIST=amsr3_crtm_exists)
-       if( .not. amsr3_crtm_exists ) then
-          amsr3_crtm_file = 'amsr3_gosat-gw.SpcCoeff.nc'
-          INQUIRE(FILE=trim(amsr3_crtm_file), EXIST=amsr3_crtm_exists)
-       endif
-    endif
-    if( .not. amsr3_crtm_exists ) then
-       sensorlist(1) = 'amsr3_gosat-gw_box'
-    endif
- endif
-
  if( crtm_coeffs_path /= "" ) then
     if(init_pass .and. mype==mype_diaghdr .and. print_verbose) &
         write(6,*)myname_,': crtm_init() on path "'//trim(crtm_coeffs_path)//'"'
@@ -656,6 +632,7 @@ subroutine init_crtm(init_pass,mype_diaghdr,mype,nchanl,nreal,isis,obstype,radmo
 
     if (isis(1:4) == 'iasi' .or. &
         trim(isis) == 'amsua_aqua' .or. &
+        trim(isis) == 'amsr3_gosat-gw' .or. &
         isis(1:4) == 'airs' .or. &
         isis(1:4) == 'cris' ) then
        subset_start = 0
@@ -748,20 +725,6 @@ else if (channelinfo(1)%sensor_id(1:4) == 'airs' .AND. isis(1:4) == 'airs') then
 
    error_status = crtm_channelinfo_subset(channelinfo(1), &
         channel_subset = nuchan(subset_start:subset_end))
-
-else if (channelinfo(1)%sensor_id(1:14) == 'amsr3_gosat-gw' .AND. isis(1:14) == 'amsr3_gosat-gw') then
-   sensorindex = 1
-   subset_start = 0
-   subset_end = 0
-   do k=1, jpch_rad
-     if (isis == nusis(k)) then
-       if (subset_start == 0) subset_start = k
-       subset_end = k
-     endif
-   end do
-
-   error_status = crtm_channelinfo_subset(channelinfo(1), &
-       channel_subset = nuchan(subset_start:subset_end))
 
 endif 
 
