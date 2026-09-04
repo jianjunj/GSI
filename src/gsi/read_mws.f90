@@ -276,7 +276,6 @@ subroutine read_mws(mype,val_tovs,ithin,isfcalc,&
   nrec=999999
 
 ! IFSCALC setup
-  isfcalc = 0
   if (isfcalc==1) then
      instr=20                    
      ichan=17                    ! pick a surface sens. channel
