@@ -2201,15 +2201,18 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                  endif
                  if (trim(cloud_names_fwd(ii))=='qr' .and.  atmosphere(1)%temperature(k)-t0c>-20.0_r_kind) then
                      cloud_cont(k,ii)=max(1.001_r_kind*1.0E-6_r_kind, cloud_cont(k,ii))
-                     cloud_efr(k,ii)=max(100.001_r_kind, cloud_efr(k,ii))
+!                    cloud_efr(k,ii)=max(100.001_r_kind, cloud_efr(k,ii))
+                     cloud_efr(k,ii)=max(5.001_r_kind, cloud_efr(k,ii))
                  endif
                  if (trim(cloud_names_fwd(ii))=='qs' .and.  atmosphere(1)%temperature(k)<t0c) then
                      cloud_cont(k,ii)=max(1.001_r_kind*1.0E-6_r_kind, cloud_cont(k,ii))
-                     cloud_efr(k,ii)=max(50.001_r_kind, cloud_efr(k,ii))
+!                    cloud_efr(k,ii)=max(50.001_r_kind, cloud_efr(k,ii))
+                     cloud_efr(k,ii)=max(5.001_r_kind, cloud_efr(k,ii))
                  endif
                  if (trim(cloud_names_fwd(ii))=='qg' .and.  atmosphere(1)%temperature(k)<t0c) then
                      cloud_cont(k,ii)=max(1.001_r_kind*1.0E-6_r_kind, cloud_cont(k,ii))
-                     cloud_efr(k,ii)=max(500.001_r_kind, cloud_efr(k,ii))
+!                    cloud_efr(k,ii)=max(500.001_r_kind, cloud_efr(k,ii))
+                     cloud_efr(k,ii)=max(5.001_r_kind, cloud_efr(k,ii))
                  endif
               end do
 !             In CRTM, if cloud fraction of the layer < 1.0E-12, set cloud content and
