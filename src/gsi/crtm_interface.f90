@@ -2182,7 +2182,7 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
                  end if
               end do
  
-!             if (cloud_cont(k,1) >= 1.0e-6_r_kind) clw_guess = clw_guess +  cloud_cont(k,1)        
+              if (cloud_cont(k,1) >= 1.0e-6_r_kind) clw_guess = clw_guess +  cloud_cont(k,1)        
               if (present(tcwv)) tcwv = tcwv + q(kk2)*c6(k)
               do ii=1,n_clouds_fwd_wk
                  if (cloud_cont(k,ii) >= 1.0e-6_r_kind) hwp_guess(ii) = hwp_guess(ii) +  cloud_cont(k,ii)        
@@ -2220,12 +2220,10 @@ subroutine call_crtm(obstype,obstime,data_s,nchanl,nreal,ich, &
 !             CRTM minimum thresholds: cloud content=1.0E-6 and cloud fraction=1.E-12
               if (.not. regional .and. icfs==0 ) atmosphere(1)%cloud_fraction(k) = cf(kk2)
               do ii=1,n_clouds_fwd_wk
-                 if(cloud_cont(k,ii) >= 1.001_r_kind*1.0E-6_r_kind .and. atmosphere(1)%cloud_fraction(k) < 1.0E-3_r_kind) then
-                   atmosphere(1)%cloud_fraction(k)=1.0E-3_r_kind
+                 if(cloud_cont(k,ii) > 1.000_r_kind*1.0E-6_r_kind .and.  atmosphere(1)%cloud_fraction(k) < 1.001_r_kind*1.0E-12_r_kind) then
+                   atmosphere(1)%cloud_fraction(k)=1.001_r_kind*1.0E-12_r_kind
                  end if
               end do
-              if (cloud_cont(k,1) >= 1.0e-6_r_kind) clw_guess = clw_guess +  cloud_cont(k,1)        
-              if (cloud_cont(k,2) >= 1.0e-6_r_kind) ciw_guess = ciw_guess +  cloud_cont(k,2)        
            end if
         endif
      endif
