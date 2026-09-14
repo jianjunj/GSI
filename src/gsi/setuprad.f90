@@ -452,6 +452,8 @@ contains
   real(r_kind),dimension(2,7,nobs) :: imager_cluster_bt
   real(r_kind),dimension(2,nobs)   :: imager_chan_stdev, imager_model_bt
 
+  integer(i_kind),dimension(4)     :: amsr_rfi_flags
+
 ! Notations in use: for a single obs. or a single obs. type
 ! nchanl        : a known channel count of a given type obs stream
 ! nchanl_diag   : a subset of "iuse"
@@ -1642,12 +1644,17 @@ contains
            bearaz=(data_s(isazi_ang,n)-data_s(ilazi_ang,n))*deg2rad + pi
            sun_zenith=data_s(iszen_ang,n)*deg2rad
            sgagl = acos( cos(sun_zenith)*cosza + sin(sun_zenith)*sin(zasat)*cos(bearaz))*rad2deg
+	   amsr_rfi_flags(1) = int(data_s(irfi_flag_1,n))
+	   amsr_rfi_flags(2) = int(data_s(irfi_flag_2,n))
+	   amsr_rfi_flags(3) = int(data_s(irfi_flag_3,n))
+	   amsr_rfi_flags(4) = int(data_s(irfi_flag_4,n))
 
            call qc_amsr2(nchanl,zsges,luse(n),sea, &
               kraintype,clw_obs,tsavg5,tb_obs,sun_azimuth,sun_zenith,amsr2,varinv,aivals(1,is),id_qc, &
               tzbgr,frac_sea, sgagl,    &
               radmod%lcloud_fwd, cenlat, sfc_speed,   &
-              tpwc_guess=tcwv,clw_guess_retrieval=clw_guess_retrieval)
+              tpwc_guess=tcwv,clw_guess_retrieval=clw_guess_retrieval, &
+	      amsr_rfi_flags=amsr_rfi_flags)
 
 !  ---------- GMI  -------------------
 !       GMI Q C

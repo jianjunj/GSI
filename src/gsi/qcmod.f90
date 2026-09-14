@@ -1742,7 +1742,8 @@ subroutine qc_amsr2(nchanl,sfchgt,luse,sea, &
      kraintype,clw,tsavg5,tbobs,solazi,solzen,amsr2,varinv,aivals,id_qc, &
      tzbgr,frac_sea, sgagl,    &
      lcw4crtm, cenlat, sfc_speed,   &
-     tpwc_guess,clw_guess_retrieval)
+     tpwc_guess,clw_guess_retrieval, &
+     amsr_rfi_flags)
 
 !$$$ subprogram documentation block
 !               .      .    .
@@ -1818,6 +1819,7 @@ subroutine qc_amsr2(nchanl,sfchgt,luse,sea, &
   logical                          ,intent(in   ) :: lcw4crtm
   real(r_kind)                     ,intent(in   ), optional :: clw_guess_retrieval, &
                                                                tpwc_guess
+  integer(i_kind),dimension(4)     ,intent(in   ), optional :: amsr_rfi_flags
 
 
 ! Declare local variables
@@ -2094,6 +2096,10 @@ subroutine qc_amsr2(nchanl,sfchgt,luse,sea, &
         endif
      end do
   end if
+
+! Toss obs potentially impact by RFI
+  if (present(amsr_rfi_flags)) then
+  endif	  
 
   return
 end subroutine qc_amsr2
