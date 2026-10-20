@@ -74,7 +74,7 @@ jobs:
           sudo mv /usr/local/ /usr_local_mv
           sudo apt-get install cmake
           rm -rf spack
-          git clone -c feature.manyFiles=true https://github.com/JCSDA/spack.git
+          git clone -c feature.manyFiles=true --depth 1 -b releases/v0.23 https://github.com/spack/spack.git
           source spack/share/spack/setup-env.sh
           spack env create gsi-env gsi/ci/spack_intel.yaml
           spack env activate gsi-env
