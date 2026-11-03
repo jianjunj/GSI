@@ -374,6 +374,7 @@ contains
   logical avhrr,avhrr_navy,viirs,lextra,ssu,iasi,iasing,cris,seviri,atms
   logical ssmi,ssmis,amsre,amsre_low,amsre_mid,amsre_hig,amsr2,gmi,saphir
   logical :: mws
+  logical :: hyms
   logical ssmis_las,ssmis_uas,ssmis_env,ssmis_img
   logical sea,mixed,land,ice,snow,toss,l_may_be_passive,eff_area
   logical microwave, microwave_low
@@ -459,6 +460,7 @@ contains
 ! And for all instruments
 ! jpch_rad      : sum(nchanl)
 ! nchanl_total  : subset of jpch_rad, sum(icc)
+  character(20)   :: isis_hyms
 
   radhead => obsLL(:)
 
@@ -534,12 +536,13 @@ contains
   saphir     = obstype == 'saphir'
   abi        = obstype == 'abi'
   mws        = obstype == 'mws'
+  hyms       = obstype == 'hyms'
 
   ssmis=ssmis_las.or.ssmis_uas.or.ssmis_img.or.ssmis_env.or.ssmis 
 
   microwave=amsua .or. amsub  .or. mhs .or. msu .or. hsb .or. &
             ssmi  .or. ssmis  .or. amsre .or. atms .or. mws .or. &
-            amsr2 .or. gmi  .or.  saphir
+            amsr2 .or. gmi  .or.  saphir .or. hyms
 
   microwave_low =amsua  .or.  msu .or. ssmi .or. ssmis .or. amsre
 
@@ -630,7 +633,12 @@ contains
   if(mype==mype_diaghdr(is) .and. init_pass .and. jiterstart == jiter)iwrmype = mype_diaghdr(is)
 
 ! Initialize radiative transfer and pointers to values in data_s
-  call init_crtm(init_pass,iwrmype,mype,nchanl,nreal,isis,obstype,radmod)
+  if (trim(isis) == 'hyms_spire') then
+     isis_hyms = 'spire_hyms'
+     call init_crtm(init_pass,iwrmype,mype,nchanl,nreal,isis_hyms,obstype,radmod)
+  else
+     call init_crtm(init_pass,iwrmype,mype,nchanl,nreal,isis,obstype,radmod)
+  endif
 
 ! Get indexes of variables in jacobian to handle exceptions down below
   ioz =getindex(radjacnames,'oz')
@@ -1008,6 +1016,8 @@ contains
               if (ieee_is_nan(tsim(i))) then
                   write(*,*) 'NaN for ',trim(isis),' channel ', sc_index(i), ' at latitude = ', &
                           cenlat,' longitude = ',cenlon
+              else if (hyms) then
+                  tsim(i) = ieee_value(tsim(i), ieee_quiet_nan)
               end if
            end do
            id_qc(1:nchanl) = ifail_crtm_nan

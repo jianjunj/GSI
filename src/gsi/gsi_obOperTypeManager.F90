@@ -363,6 +363,7 @@ function dtype2index_(dtype) result(index_)
     case("metimage" ); index_= iobOper_rad
     case("viirs-m"  ); index_= iobOper_rad
     case("mws"  ); index_= iobOper_rad
+    case("hyms"  ); index_= iobOper_rad
 
   case("tcp"    ,"[tcpoper]"    ); index_= iobOper_tcp
 
