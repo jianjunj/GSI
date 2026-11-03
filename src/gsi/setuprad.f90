@@ -633,7 +633,7 @@ contains
   if(mype==mype_diaghdr(is) .and. init_pass .and. jiterstart == jiter)iwrmype = mype_diaghdr(is)
 
 ! Initialize radiative transfer and pointers to values in data_s
-  if (trim(isis) == 'hyms_spire') then
+  if (trim(isis) == 'hyms_iod') then
      isis_hyms = 'spire_hyms'
      call init_crtm(init_pass,iwrmype,mype,nchanl,nreal,isis_hyms,obstype,radmod)
   else
