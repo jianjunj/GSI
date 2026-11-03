@@ -951,6 +951,7 @@ subroutine read_obs(ndata,mype)
                amsre  .or. ssmis      .or. obstype == 'ssmi'      .or.  &
                obstype == 'ssu'       .or. obstype == 'atms'      .or.  &
                obstype == 'mws'       .or.                              &
+               obstype == 'hyms'      .or.                              &
                obstype == 'cris'      .or. obstype == 'cris-fsr'  .or.  &
                obstype == 'amsr2'     .or. obstype == 'viirs-m'   .or.  obstype == 'metimage' .or. &
                obstype == 'gmi'       .or. obstype == 'saphir'   ) then
@@ -1051,6 +1052,8 @@ subroutine read_obs(ndata,mype)
 !                 parallel_read(i)= .true.
              else if(obstype == 'mws')then
 !                 parallel_read(i)= .true.
+             else if(obstype == 'hyms')then
+!                 parallel_read(i)= .true.
              else if(ssmis)then
 !               parallel_read(i)= .true.  
              else if(seviri)then
@@ -1106,11 +1109,13 @@ subroutine read_obs(ndata,mype)
                   (obstype == 'amsua' .or.  obstype == 'amsub' .or.  & 
                    obstype == 'mhs' .or. obstype == 'atms' .or. &
                    obstype == 'mws' .or.                        &
+                   obstype == 'hyms'.or.                        &
                    obstype == 'cris' .or. obstype == 'cris-fsr' .or. &
                    obstype == 'iasi' .or. obstype == 'iasi-ng') .and. &
                   (dplat(i) == 'n17' .or. dplat(i) == 'n18' .or. & 
                    dplat(i) == 'n19' .or. dplat(i) == 'npp' .or. &
                    dplat(i) == 'n20' .or. dplat(i) == 'n21' .or. &
+                   dplat(i) == 'iod' .or.                        &
                    dplat(i) == 'metop-a' .or. dplat(i) == 'metop-b' .or. &
                    dplat(i) == 'metop-c' .or. dplat(i) == 'metop-sg-a1')  
 
@@ -1778,6 +1783,14 @@ subroutine read_obs(ndata,mype)
                      mype_root,mype_sub(mm1,i),npe_sub(i),mpi_comm_sub(i),nobs_sub1(1,i),&
                      read_rec(i),read_ears_rec(i),read_db_rec(i),dval_use,radmod)
                 string='READ_MWS'
+
+!            Process hyms data
+             else if (obstype == 'hyms') then
+                call read_hyms(mype,val_dat,ithin,isfcalc,rmesh,dplat(i),gstime,&
+                     infile,lunout,obstype,nread,npuse,nouse,twind,sis, &
+                     mype_root,mype_sub(mm1,i),npe_sub(i),mpi_comm_sub(i),nobs_sub1(1,i),&
+                     read_rec(i),read_ears_rec(i),read_db_rec(i),dval_use,radmod)
+                string='READ_HYMS'
 
 !            Process saphir data
              else if (obstype == 'saphir') then
