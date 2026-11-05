@@ -195,7 +195,7 @@ subroutine read_hyms(mype,val_tovs,ithin,isfcalc,&
      return
   end if
 
-  if (jsatid /= 'lemur3u') then
+  if (jsatid /= 'iod') then
      write(6,*) 'READ_HYMS: Unrecognized value for jsatid '//jsatid//': RETURNING'
      return
   end if
