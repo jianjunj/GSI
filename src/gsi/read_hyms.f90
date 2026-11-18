@@ -105,7 +105,7 @@ subroutine read_hyms(mype,val_tovs,ithin,isfcalc,&
   integer(i_kind),parameter:: n2bhdr=4
   integer(i_kind),parameter:: maxobs = 1000000
 ! Upper bound on the number of replicated channels (1759 in the data)
-  integer(i_kind),parameter:: max_bufr_chan = 2048
+  integer(i_kind),parameter:: max_bufr_chan = 2637
   integer(i_kind),parameter:: kidsat = 269       ! SAID: Spire Lemur 3U cubesat
   real(r_kind),parameter:: r360=360.0_r_kind
   real(r_kind),parameter:: tbmin=50.0_r_kind
@@ -219,7 +219,7 @@ subroutine read_hyms(mype,val_tovs,ithin,isfcalc,&
 ! 40 FOVs per scan (FOVN 0-39 in the BUFR file, used here as ifov=FOVN+1).
 ! The satellite zenith angle is smallest at FOVN=20, i.e. the scan passes
 ! nadir between ifov=20 and ifov=21; ifov<=nadir are on the negative side.
-  nadir=20
+  nadir=21
 
 ! Select the satinfo channels for this sensor and map BUFR channel numbers
 ! (CHNM) onto their position in the satinfo list.
@@ -419,7 +419,7 @@ subroutine read_hyms(mype,val_tovs,ithin,isfcalc,&
            end if
 
 !          Check for errors in satellite zenith angles 
-           if(abs(lzaest-lza)*rad2deg > one) then
+           if(abs(abs(lzaest)-abs(lza))*rad2deg > one) then
               write(6,*)' READ_HYMS WARNING uncertainty in lza ', &
               lza*rad2deg,lzaest*rad2deg,sis,ifov,start,step
               cycle read_loop
